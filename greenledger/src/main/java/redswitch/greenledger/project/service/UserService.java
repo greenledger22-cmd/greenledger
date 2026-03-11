@@ -55,13 +55,18 @@ public class UserService {
 
     public ResponseEntity<String > updateUser(User  user,String userId){
 
-        User userDb = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        LocalDate today=LocalDate.now();
-        userDb.setRole(user.getRole());
-        userDb.setUpdateDate(today.getYear()+"_"+today.getMonth());
-        userRepository.save(userDb);
-        System.out.println(userDb.getId());
+        Optional<User> userExist = userRepository.findById(userId);
+        if (userExist.isPresent()) {
+            User userDb=userExist.get();
+            LocalDate today = LocalDate.now();
+            userDb.setRole(user.getRole());
+            userDb.setUpdateDate(today.getYear() + "_" + today.getMonth());
+            userRepository.save(userDb);
+           // System.out.println(userDb.getId());
+        }else return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body("User not found");
+
         return   ResponseEntity.status(HttpStatus.CREATED).body( "user updated successfully ");
     }
 
