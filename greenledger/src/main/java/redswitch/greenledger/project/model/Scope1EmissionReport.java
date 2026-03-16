@@ -19,7 +19,7 @@ public class Scope1EmissionReport {
     private String sourceName;
     private String fuelType;
 
-    private Scope1ActivityData activityData;
+    private Scope1ActivityDataIngest activityData;
 //    private EmissionFactor emissionFactor;
 //    private EmissionResult emissionResult;
 //

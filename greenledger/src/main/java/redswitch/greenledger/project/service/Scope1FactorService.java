@@ -12,6 +12,7 @@ import redswitch.greenledger.project.repository.Scope1FactorRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class Scope1FactorService {
@@ -35,6 +36,35 @@ public class Scope1FactorService {
 
         return   ResponseEntity.status(HttpStatus.CREATED).body("scope factor added successfully");
     }
+
+
+    public ResponseEntity<String > updateFactor(Scope1FactorData scope1FactorData){
+        try {
+            Optional<Scope1FactorData> existsFactor= Optional.ofNullable(scope1FactorRepository.findByFuelTypeAndFuelNameContainingIgnoreCase(scope1FactorData.getFuelType(), scope1FactorData.getFuelName()));
+            if (existsFactor.isPresent()){
+                Scope1FactorData factor=existsFactor.get();
+                factor.setCo2Factor(scope1FactorData.getCo2Factor());
+                factor.setCh4Factor(scope1FactorData.getCh4Factor());
+                factor.setN2oFactor(scope1FactorData.getN2oFactor());
+                factor.setCo2eTotal(scope1FactorData.getCo2eTotal());
+                scope1FactorRepository.save(factor);
+            }else return   ResponseEntity.status(HttpStatus.CREATED).body("unable to find scope factor of "+scope1FactorData.getFuelName());
+
+        }catch (Exception e){
+            logger.error(e.getMessage());
+            return   ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unable to save data");
+        }
+        return   ResponseEntity.status(HttpStatus.CREATED).body("scope factor  "+scope1FactorData.getFuelName()+"updated successfully");
+
+    }
+
+
+
+
+
+
+
+
 
     public ResponseEntity<List<Scope1FactorData>> getFactorData(String fuelName,String fuelType) {
         List<Scope1FactorData> fueldata=new ArrayList<>();

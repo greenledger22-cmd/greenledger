@@ -40,6 +40,24 @@ public class Scope1FactorController {
         return scope1FactorService.addFactor(scope1FactorData);
     }
 
+
+    @PostMapping("/updateFactor")
+    public ResponseEntity<String> updateFactorData(@RequestHeader("email") String email,
+                                                @RequestBody Scope1FactorData scope1FactorData) {
+
+
+        if (scope1FactorData.getFuelName().isEmpty() || scope1FactorData.getFuelType().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("factor name or factor type can't be empty");
+        }
+
+        return scope1FactorService.updateFactor(scope1FactorData);
+    }
+
+
+
+
+
+
 //can find by name or find by fuel type any of these two.
     @GetMapping("/getFactor")
     public ResponseEntity<List<Scope1FactorData>> getFactorData(@RequestHeader("email") String email,

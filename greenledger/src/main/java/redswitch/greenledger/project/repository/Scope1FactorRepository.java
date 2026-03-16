@@ -10,5 +10,6 @@ public interface Scope1FactorRepository extends MongoRepository<Scope1FactorData
     List<Scope1FactorData> findByFuelNameContainingIgnoreCase(String fuelName);
     List<Scope1FactorData> findByFuelTypeContainingIgnoreCase(String fuelType);
     boolean existsByFuelTypeAndFuelNameContainingIgnoreCase(String fuelType,String fuelName);
+    Scope1FactorData findByFuelTypeAndFuelNameContainingIgnoreCase(String fuelType,String fuelName);
 }
 
