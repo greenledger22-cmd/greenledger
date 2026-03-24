@@ -10,6 +10,7 @@ import redswitch.greenledger.project.model.Scope1FactorData;
 import redswitch.greenledger.project.model.User;
 import redswitch.greenledger.project.repository.Scope1FactorRepository;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -24,9 +25,13 @@ public class Scope1FactorService {
 
     public ResponseEntity<String > addFactor(Scope1FactorData scope1FactorData){
         try {
-            boolean alreadyExists=scope1FactorRepository.existsByFuelTypeAndFuelNameContainingIgnoreCase(scope1FactorData.getFuelType(),scope1FactorData.getFuelName());
-            if (!alreadyExists)
+             Optional<Scope1FactorData> existsScope=scope1FactorRepository.findByFuelTypeAndFuelName(scope1FactorData.getFuelType().trim(),scope1FactorData.getFuelName().trim());
+            if (!existsScope.isPresent()) {
+                scope1FactorData.setCreationDateString(LocalDate.now().toString());
+                scope1FactorData.setUpdateDateString(LocalDate.now().toString());
                 scope1FactorRepository.insert(scope1FactorData);
+
+            }
             else
                 return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body("Fuel type/ fuel name already exists");;
         }catch (Exception e){
@@ -40,17 +45,19 @@ public class Scope1FactorService {
 
     public ResponseEntity<String > updateFactor(Scope1FactorData scope1FactorData){
         try {
-            Optional<Scope1FactorData> existsFactor= Optional.ofNullable(scope1FactorRepository.findByFuelTypeAndFuelNameContainingIgnoreCase(scope1FactorData.getFuelType(), scope1FactorData.getFuelName()));
+            Optional<Scope1FactorData> existsFactor= scope1FactorRepository.findByFuelTypeAndFuelName(scope1FactorData.getFuelType().trim(), scope1FactorData.getFuelName().trim());
             if (existsFactor.isPresent()){
                 Scope1FactorData factor=existsFactor.get();
                 factor.setCo2Factor(scope1FactorData.getCo2Factor());
                 factor.setCh4Factor(scope1FactorData.getCh4Factor());
                 factor.setN2oFactor(scope1FactorData.getN2oFactor());
                 factor.setCo2eTotal(scope1FactorData.getCo2eTotal());
+                factor.setUpdateDateString(LocalDate.now().toString());
                 scope1FactorRepository.save(factor);
-            }else return   ResponseEntity.status(HttpStatus.CREATED).body("unable to find scope factor of "+scope1FactorData.getFuelName());
+            }else return   ResponseEntity.status(HttpStatus.NOT_FOUND).body("unable to find scope factor of "+scope1FactorData.getFuelName());
 
         }catch (Exception e){
+
             logger.error(e.getMessage());
             return   ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unable to save data");
         }
