@@ -1,8 +1,14 @@
 package redswitch.greenledger.project.service;
 
+import com.opencsv.CSVWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
+import redswitch.greenledger.project.model.CsvResponse;
 import redswitch.greenledger.project.model.Scope1ActivityDataIngest;
 import redswitch.greenledger.project.model.Scope1EmissionReport;
 import redswitch.greenledger.project.model.Scope1FactorData;
@@ -10,16 +16,22 @@ import redswitch.greenledger.project.repository.Scope1DataIngestRepository;
 import redswitch.greenledger.project.repository.Scope1FactorRepository;
 import redswitch.greenledger.project.repository.Scope1ReportRepository;
 
+import java.io.StringWriter;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 @Service
 public class Scope1EmissionReportService {
 
     private static final Logger logger = LoggerFactory.getLogger(Scope1DataIngestService.class);
 
-
+    @Autowired
+    private MongoTemplate mongoTemplate;
     private final Scope1ReportRepository scope1ReportRepository;
     private final Scope1FactorRepository scope1FactorRepository;
     private final Scope1DataIngestRepository scope1DataIngestRepository;
@@ -32,6 +44,13 @@ public class Scope1EmissionReportService {
         this.scope1DataIngestRepository=scope1DataIngestRepository;
     }
 
+
+    public List<Scope1EmissionReport> getReportsInRange(String start, String end) {
+        Query query = new Query();
+        query.addCriteria(Criteria.where("reportDate").gte(start).lte(end));
+
+        return mongoTemplate.find(query, Scope1EmissionReport.class);
+    }
 
     public void newReport(String fuelName,String fuelType,String yearMonth){
         try {
@@ -88,5 +107,90 @@ public class Scope1EmissionReportService {
 
 
     }
+
+
+    public CsvResponse generateScope1ReportCsv(String reportType, String startMonth,String endMonth){
+
+
+
+        List<Scope1EmissionReport> reports =
+                getReportsInRange(startMonth, endMonth);
+        StringWriter writer = new StringWriter();
+        CSVWriter csvWriter = new CSVWriter(writer);
+        System.out.println(reports);
+        // Step 1: headers
+        List<String> headers = List.of(
+                "Facility", "Fuel Name", "Fuel Type","Input Fuel",
+                "CO2e Total", "CO2 Factor", "CH4 Factor",
+                "N2O Factor", "Input Unit", "Output Unit", "Report Date"
+        );
+
+        csvWriter.writeNext(headers.toArray(new String[0]));
+
+        // Step 2: mapping
+//        Map<String, Function<Scope1EmissionReport, String>> fieldMapping = Map.ofEntries(
+//                Map.entry("Facility", r -> safe(r.getFacilityName())),
+//                Map.entry("Fuel Name", r -> safe(r.getFuelName())),
+//                Map.entry("Input Fuel", r -> safe(r.getInputUnit())),
+//                Map.entry("Fuel Type", r -> safe(r.getFuelType())),
+//                Map.entry("CO2e Total", r -> String.valueOf(r.getCo2eTotal())),
+//                Map.entry("CO2 Factor", r -> String.valueOf(r.getCo2Factor())),
+//                Map.entry("CH4 Factor", r -> String.valueOf(r.getCh4Factor())),
+//                Map.entry("N2O Factor", r -> String.valueOf(r.getN2oFactor())),
+//                Map.entry("Input Unit", r -> safe(r.getInputUnit())),
+//                Map.entry("Output Unit", r -> safe(r.getOutputUnit())),
+//                Map.entry("Report Date", r -> safe(r.getReportDate()))
+//                 // 11th Entry
+//        );
+        for (Scope1EmissionReport r : reports) {
+            String[] row = new String[]{
+                    safe(r.getFacilityName()),
+                    safe(r.getFuelName()),
+                    safe(r.getFuelType()),
+                    String.valueOf(r.getActivityData().getQuantity()),
+                    String.valueOf(r.getCo2eTotal()),
+                    String.valueOf(r.getCo2Factor()),
+                    String.valueOf(r.getCh4Factor()),
+                    String.valueOf(r.getN2oFactor()),
+                    safe(r.getInputUnit()),
+                    safe(r.getOutputUnit()),
+                    safe(r.getReportDate())
+            };
+
+            csvWriter.writeNext(row);
+        }
+        String fileName = reportType + "-" + startMonth + "-to-" + endMonth + ".csv";
+        String collection = "emissions_report";
+        Map<String, Object> payload=new HashMap<>();
+        payload.put("File name",fileName);
+        payload.put("Report type",reportType);
+        payload.put("Start month",startMonth);
+        payload.put("End month",endMonth);
+        payload.put("Creation date",LocalDate.now());
+        saveDataToCollection(payload, collection);
+
+
+        return new CsvResponse(fileName,writer.toString()) ;
+
+    }
+
+
+    private String safe(String value) {
+        return value == null ? "" : value;
+    }
+
+
+    public void saveDataToCollection(Map<String, Object> data, String collectionName) {
+        // Option A: Pass the Map directly
+        try {
+            mongoTemplate.insert(data, collectionName);
+        }catch (Exception e ){
+            logger.error("error while saving data to collectionName"+e.getMessage());
+        }
+        System.out.println("Data successfully inserted into " + collectionName);
+    }
+
+
+
 
 }
