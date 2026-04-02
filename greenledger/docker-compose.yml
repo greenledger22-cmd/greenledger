@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+
+  mongo:
+    image: mongo
+    container_name: mongo_db
+    ports:
+      - "27017:27017"
+
+  app:
+    image: green-ledger
+    container_name: green_ledger_app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongo
+    environment:
+      - SPRING_DATA_MONGODB_URI=mongodb://host.docker.internal:27017/sustainability

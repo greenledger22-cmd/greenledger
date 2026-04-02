@@ -15,7 +15,7 @@ import java.util.List;
 @RequestMapping("/report")
 public class ReportGenerateController {
 
-    private static final Logger logger = LoggerFactory.getLogger(Scope1ActivityIngestController.class);
+    private static final Logger logger = LoggerFactory.getLogger(ReportGenerateController.class);
 
     private final Scope1EmissionReportService scope1EmissionReportService;
     public ReportGenerateController(Scope1EmissionReportService scope1EmissionReportService) {

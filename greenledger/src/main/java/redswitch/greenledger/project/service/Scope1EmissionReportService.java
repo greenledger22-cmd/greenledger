@@ -127,21 +127,7 @@ public class Scope1EmissionReportService {
 
         csvWriter.writeNext(headers.toArray(new String[0]));
 
-        // Step 2: mapping
-//        Map<String, Function<Scope1EmissionReport, String>> fieldMapping = Map.ofEntries(
-//                Map.entry("Facility", r -> safe(r.getFacilityName())),
-//                Map.entry("Fuel Name", r -> safe(r.getFuelName())),
-//                Map.entry("Input Fuel", r -> safe(r.getInputUnit())),
-//                Map.entry("Fuel Type", r -> safe(r.getFuelType())),
-//                Map.entry("CO2e Total", r -> String.valueOf(r.getCo2eTotal())),
-//                Map.entry("CO2 Factor", r -> String.valueOf(r.getCo2Factor())),
-//                Map.entry("CH4 Factor", r -> String.valueOf(r.getCh4Factor())),
-//                Map.entry("N2O Factor", r -> String.valueOf(r.getN2oFactor())),
-//                Map.entry("Input Unit", r -> safe(r.getInputUnit())),
-//                Map.entry("Output Unit", r -> safe(r.getOutputUnit())),
-//                Map.entry("Report Date", r -> safe(r.getReportDate()))
-//                 // 11th Entry
-//        );
+
         for (Scope1EmissionReport r : reports) {
             String[] row = new String[]{
                     safe(r.getFacilityName()),
