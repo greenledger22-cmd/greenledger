@@ -26,7 +26,7 @@ public class Scope1ActivityIngestController {
     }
 
     @PostMapping("/ingestEmission")
-    public ResponseEntity<String> addUser(@RequestBody Scope1ActivityDataIngest scope1ActivityDataIngest,
+    public ResponseEntity<String> addData(@RequestBody Scope1ActivityDataIngest scope1ActivityDataIngest,
                                           @RequestHeader("email") String email){
 
 

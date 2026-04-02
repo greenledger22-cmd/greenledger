@@ -7,6 +7,7 @@ import redswitch.greenledger.project.model.User;
 import redswitch.greenledger.project.repository.UserRepository;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,7 +38,10 @@ public class UserService {
         return   ResponseEntity.status(HttpStatus.CREATED).body( "user added successfully ");
     }
 
-    public ResponseEntity<List<User>> getAllUser(){
+    public ResponseEntity<List<User>> getAllUser(String userName){
+                if(userName!=null && !userName.isBlank() ){
+                    return  ResponseEntity.ok(Collections.singletonList(userRepository.findByName(userName)));
+                }
 
         return   ResponseEntity.ok(userRepository.findAll());
     }

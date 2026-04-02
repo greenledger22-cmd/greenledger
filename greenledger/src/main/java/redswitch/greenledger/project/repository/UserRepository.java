@@ -6,4 +6,5 @@ import redswitch.greenledger.project.model.User;
 
 @Repository
 public interface UserRepository extends MongoRepository<User,String> {
+    public User findByName(String userName);
 }

@@ -38,15 +38,15 @@ public class UserController {
     }
 
     @GetMapping("/getAllUser")
-    public ResponseEntity<List<User>> getUser(){
+    public ResponseEntity<List<User>> getUser(@RequestParam("id") String userName){
 
-        return userService.getAllUser();
+        return userService.getAllUser(userName);
     }
-    @GetMapping("/getUserById/{id}")
-    public ResponseEntity<User> getById( @PathVariable("id") String userId){
-
-        return userService.getUserById(userId);
-    }
+//    @GetMapping("/getUserById/{id}")
+//    public ResponseEntity<User> getById( @PathVariable("id") String userId){
+//
+//        return userService.getUserById(userId);
+//    }
 
 
     @PostMapping("/updateUser/{id}")
