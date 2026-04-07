@@ -120,7 +120,7 @@ public class Scope1EmissionReportService {
         System.out.println(reports);
         // Step 1: headers
         List<String> headers = List.of(
-                "Facility", "Fuel Name", "Fuel Type","Input Fuel",
+                "Facility", "Fuel Name", "Fuel Type","Input Fuel","Fuel Cost",
                 "CO2e Total", "CO2 Factor", "CH4 Factor",
                 "N2O Factor", "Input Unit", "Output Unit", "Report Date"
         );
@@ -134,6 +134,7 @@ public class Scope1EmissionReportService {
                     safe(r.getFuelName()),
                     safe(r.getFuelType()),
                     String.valueOf(r.getActivityData().getQuantity()),
+                    String.valueOf(r.getCost()),
                     String.valueOf(r.getCo2eTotal()),
                     String.valueOf(r.getCo2Factor()),
                     String.valueOf(r.getCh4Factor()),

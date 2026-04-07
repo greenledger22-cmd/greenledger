@@ -83,6 +83,9 @@ public class Scope2DataIngestService {
                 updateIngest.setEmissionType(scope2ActivityDataIngest.getEmissionType());
                 updateIngest.setUnit(scope2ActivityDataIngest.getUnit());
                 updateIngest.setYearMonth(scope2ActivityDataIngest.getYearMonth());
+                LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+                updateIngest.setUpdateDate(todayUtc);
+
                 scope2DataIngestRepository.save(updateIngest);
 
             }
