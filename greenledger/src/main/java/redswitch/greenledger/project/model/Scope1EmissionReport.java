@@ -27,7 +27,7 @@ public class Scope1EmissionReport {
     private double co2Factor;
     private double ch4Factor;
     private double n2oFactor;
-
+    private double cost;
     private Scope1ActivityDataIngest activityData;
     private Scope1FactorData scope1FactorData;
 

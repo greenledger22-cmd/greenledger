@@ -9,6 +9,7 @@ import redswitch.greenledger.project.model.Scope1FactorData;
 import redswitch.greenledger.project.service.Scope1DataIngestService;
 import redswitch.greenledger.project.service.Scope1EmissionReportService;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -31,14 +32,28 @@ public class ReportGenerateController {
         return "";
     }
 
-    @GetMapping("/GenerateReport/{reportType}/{startMonth}/{endMonth}")
+    @GetMapping("/GenerateReport/{reportType}")
     public ResponseEntity<byte[]> getScope1Report(@PathVariable   String reportType,
-                                  @PathVariable   String startMonth,
+                                  @RequestParam   String startMonth,
                                   @PathVariable   String endMonth) {
 
         if (startMonth.compareTo(endMonth) > 0) {
             throw new IllegalArgumentException("Invalid date range");
         }
+        LocalDate today=LocalDate.now();
+        if (startMonth.isBlank()){
+
+            startMonth= today.getYear()+"-"+today.getMonth();
+
+        }
+        if (endMonth.isBlank()){
+            today=today.plusMonths(6);
+            endMonth= today.getYear()+"-"+today.getMonth();
+
+        }
+
+
+
 
             ResponseEntity  response = null;
         if (reportType.equalsIgnoreCase("scope1")){

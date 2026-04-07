@@ -2,6 +2,7 @@ package redswitch.greenledger.project.service;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import redswitch.greenledger.project.model.User;
 import redswitch.greenledger.project.repository.UserRepository;
@@ -31,7 +32,17 @@ public class UserService {
             user.setCreationDate(today.getYear()+"_"+today.getMonth());
             user.setUpdateDate(today.getYear()+"_"+today.getMonth());
             user.setId(generatedId);
+            BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
+            String rawPassword = user.getPassword();
+
+            // Encode (hash)
+            String encodedPassword = encoder.encode(rawPassword);
+            user.setPassword(encodedPassword.trim());
+           // System.out.println("Encoded: " + encodedPassword);
+
+            // Verify (instead of decoding)
+            //boolean isMatch = encoder.matches(rawPassword, encodedPassword);
 
             userRepository.insert(user);
         }
@@ -65,7 +76,15 @@ public class UserService {
             LocalDate today = LocalDate.now();
             userDb.setRole(user.getRole());
             userDb.setUpdateDate(today.getYear() + "_" + today.getMonth());
-            userRepository.save(userDb);
+            BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+            boolean isMatch = encoder.matches(user.getPassword().trim(), userDb.getPassword().trim());
+
+            if (isMatch){
+                return ResponseEntity
+                        .status(HttpStatus.NOT_ACCEPTABLE)
+                        .body("same password");
+                }
+            else userRepository.save(userDb);
            // System.out.println(userDb.getId());
         }else return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)

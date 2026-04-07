@@ -16,4 +16,4 @@ services:
     depends_on:
       - mongo
     environment:
-      - SPRING_DATA_MONGODB_URI=mongodb://host.docker.internal:27017/sustainability
+      - SPRING_DATA_MONGODB_URI=mongodb+srv://greenledger22_db_user:P5uOJYAEFzQqWCsN@cluster0.od8ro7c.mongodb.net/sustainability?appName=Cluster0

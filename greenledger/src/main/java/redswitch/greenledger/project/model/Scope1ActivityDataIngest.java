@@ -17,6 +17,7 @@ public class Scope1ActivityDataIngest {
     private String fuelName;
     private String fuelType;
     private double quantity;
+    private double cost;
     private String unit;
     private String email;
     private String yearMonth;

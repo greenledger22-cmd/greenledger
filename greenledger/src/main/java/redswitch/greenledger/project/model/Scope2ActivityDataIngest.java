@@ -24,6 +24,7 @@ public class Scope2ActivityDataIngest {
     private double amount;
     private String amountType;
     private String outputUnit;
+    private Double cost;
     private String email;
     private String yearMonth;
     private int status;
