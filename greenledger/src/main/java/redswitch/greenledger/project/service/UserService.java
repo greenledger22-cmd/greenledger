@@ -4,26 +4,35 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import redswitch.greenledger.project.model.ApiResponse;
+import redswitch.greenledger.project.model.JwtUtil;
 import redswitch.greenledger.project.model.User;
 import redswitch.greenledger.project.repository.UserRepository;
 
 import java.time.LocalDate;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+
+import static org.springframework.http.HttpStatus.*;
 
 @Service
 public class UserService {
 
-
+    private final BCryptPasswordEncoder encoder;
     private final UserRepository userRepository;
-    public UserService(UserRepository userRepository){
-        this.userRepository=userRepository;
+    private final JwtUtil jwtUtil;
+
+    public UserService(UserRepository userRepository,
+                       BCryptPasswordEncoder encoder,
+                       JwtUtil jwtUtil) {
+        this.userRepository = userRepository;
+        this.encoder = encoder;
+        this.jwtUtil = jwtUtil;
     }
 
-
-
-    public ResponseEntity<String > addUser(User  user){
+    public ResponseEntity<ApiResponse> addUser(User  user){
 
         if (user!=null && !user.toString().isEmpty()){
             String generatedId = user.getCompany().replace(" ","_") + "_" + user.getEmail().replace("@","_").replace(".","_") +"_" + user.getName();
@@ -39,58 +48,129 @@ public class UserService {
             // Encode (hash)
             String encodedPassword = encoder.encode(rawPassword);
             user.setPassword(encodedPassword.trim());
-           // System.out.println("Encoded: " + encodedPassword);
 
-            // Verify (instead of decoding)
-            //boolean isMatch = encoder.matches(rawPassword, encodedPassword);
+            Optional<User> exists= userRepository.findByEmail(user.getEmail());
+            if (exists.isPresent() && exists.get().getEmail().trim().equals(user.getEmail().trim()))
+                return ResponseEntity.status(CONFLICT)
+                        .body(new ApiResponse("Email already exists", CONFLICT.value(), exists.get().getEmail()));
+
+
 
             userRepository.insert(user);
         }
-        return   ResponseEntity.status(HttpStatus.CREATED).body( "user added successfully ");
+
+
+        return   ResponseEntity.ok(
+                new ApiResponse("user added successfully", HttpStatus.CREATED.value(), user));
     }
 
-    public ResponseEntity<List<User>> getAllUser(String userName){
+    public ResponseEntity<ApiResponse> getAllUser(String userName){
                 if(userName!=null && !userName.isBlank() ){
-                    return  ResponseEntity.ok(Collections.singletonList(userRepository.findByName(userName)));
+                    return  ResponseEntity.ok(
+
+                            new ApiResponse("Success", HttpStatus.OK.value(),
+                                    Collections.singletonList(userRepository.findByName(userName))
+
+                            ));
                 }
 
-        return   ResponseEntity.ok(userRepository.findAll());
+        return  ResponseEntity.ok(
+                new ApiResponse("Success", HttpStatus.OK.value(), userRepository.findAll()));
     }
 
 
 
-    public ResponseEntity<User> getUserById(String userId){
+    public ResponseEntity<ApiResponse> getUserById(String userId){
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return   ResponseEntity.ok(user);
+        return     ResponseEntity.ok(
+                new ApiResponse("Found user", OK.value(), user));
+
     }
 
 
 
-    public ResponseEntity<String > updateUser(User  user,String userId){
+    public ResponseEntity<ApiResponse> updateUser(User  user,String userId){
 
         Optional<User> userExist = userRepository.findById(userId);
         if (userExist.isPresent()) {
             User userDb=userExist.get();
             LocalDate today = LocalDate.now();
-            userDb.setRole(user.getRole());
+            //userDb.setRole(user.getRole());
             userDb.setUpdateDate(today.getYear() + "_" + today.getMonth());
             BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
             boolean isMatch = encoder.matches(user.getPassword().trim(), userDb.getPassword().trim());
 
             if (isMatch){
-                return ResponseEntity
-                        .status(HttpStatus.NOT_ACCEPTABLE)
-                        .body("same password");
+                return ResponseEntity.ok(
+                        new ApiResponse("same password", HttpStatus.NOT_ACCEPTABLE.value(), userRepository.findAll()));
+
                 }
             else userRepository.save(userDb);
            // System.out.println(userDb.getId());
-        }else return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body("User not found");
+        }else return ResponseEntity.ok(
+                new ApiResponse("User not found", HttpStatus.NOT_FOUND.value(), null));
 
-        return   ResponseEntity.status(HttpStatus.CREATED).body( "user updated successfully ");
+        return ResponseEntity.ok(
+                new ApiResponse("user updated successfully ", HttpStatus.CREATED.value(), null));
     }
 
-}
+    public ResponseEntity<ApiResponse> login(String userName, String email,String password) {
+
+        Optional<User> userData;
+        if (email != null) {
+            userData = userRepository.findByEmail(email);
+        } else {
+            userData = userRepository.findByUserName(userName);
+        }
+
+        if (!userData.isPresent() ) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse("User not found", HttpStatus.NOT_FOUND.value(), null));
+        }
+        User user=userData.get();
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        if (!encoder.matches(password, user.getPassword())) {
+            return ResponseEntity.status(UNAUTHORIZED)
+                    .body(new ApiResponse("Invalid password", HttpStatus.UNAUTHORIZED.value(), user.getPassword()));
+        }
+
+        String token="";
+        //jwt token
+        if (email!=null && !email.isEmpty())
+             token = jwtUtil.generateToken(
+                    user.getEmail(),
+                    user.getRole().name()
+            );
+        else if(userName!=null && !userName.isEmpty())
+            token = jwtUtil.generateToken(
+                    user.getUserName(),
+                    user.getRole().name()
+            );
+
+
+
+        //System.out.println("delete api Issued At: " + new Date());
+        ///System.out.println("Expiry: " + expirationDate);
+        return ResponseEntity.status(OK)
+                .body(new ApiResponse("User authenticated", OK.value(),token ));
+    }
+
+    public ResponseEntity<ApiResponse> delete(String id) {
+
+        if (!userRepository.existsById(id)) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse("User not found with id:"+ id, NOT_FOUND.value() , id));
+        }
+        //System.out.println(" delete api Server time: " + new Date());
+        userRepository.deleteById(id);
+        return ResponseEntity.ok(new ApiResponse( "User deleted successfully", OK.value(), id));
+    }
+    }
+
+
+
+
+
+

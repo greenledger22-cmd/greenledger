@@ -43,7 +43,7 @@ public class Scope1ActivityIngestController {
     @PostMapping("/updateEmission")
     public ResponseEntity<String> updateEmission(@RequestBody Scope1ActivityDataIngest scope1ActivityDataIngest,
                                           @RequestHeader("email") String email,
-                                             @RequestParam(required = false)String id){
+                                                 @RequestParam(required = false)String id){
 
 
         if (scope1ActivityDataIngest.getFuelName()==null || scope1ActivityDataIngest.getFuelName().isEmpty())

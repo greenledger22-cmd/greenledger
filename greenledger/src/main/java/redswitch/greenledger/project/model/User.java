@@ -16,7 +16,7 @@ public class User {
     private String email;
     private String company;
     private String org_id;
-    private String role;
+    private Role role;
     private String creationDate;
     private String updateDate;
     private String userName;
