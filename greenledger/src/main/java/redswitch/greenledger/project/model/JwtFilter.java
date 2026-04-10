@@ -29,13 +29,22 @@ public class JwtFilter extends OncePerRequestFilter {
 
 
         String header = request.getHeader("Authorization");
+        String path = request.getServletPath();
 
+        if (path.equals("/user/sendOtp") || path.equals("/factor/getFactor") ||
+                path.equals("/factor/addFactor")||path.equals("/factor/updateFactor")||
+                path.equals("/scope1Ingest/ingestEmission")||
+                path.equals("/scope1Ingest/updateEmission")||
+                path.equals("/scope1Ingest/getAllIngest") ||
+                path.equals("/user/verifyOtp") || path.equals("/user/addUser")) {
+            chain.doFilter(request, response);
+            return;
+        }
 
         if (header != null && header.startsWith("Bearer ")) {
 
-            String token = header.substring(7); // 👈 HERE
+            String token = header.substring(7);
 
-            // 👇 ADD HERE
             String email = jwtUtil.extractEmail(token);
             String role = jwtUtil.extractRole(token);
 

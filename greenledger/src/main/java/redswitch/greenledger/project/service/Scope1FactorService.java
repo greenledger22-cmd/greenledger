@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import redswitch.greenledger.project.controller.UserController;
+import redswitch.greenledger.project.model.ApiResponse;
 import redswitch.greenledger.project.model.Scope1FactorData;
 import redswitch.greenledger.project.model.User;
 import redswitch.greenledger.project.repository.Scope1FactorRepository;
@@ -23,7 +24,7 @@ public class Scope1FactorService {
         this.scope1FactorRepository=scope1FactorRepository;
     }
 
-    public ResponseEntity<String > addFactor(Scope1FactorData scope1FactorData){
+    public ResponseEntity<ApiResponse> addFactor(Scope1FactorData scope1FactorData){
         try {
              Optional<Scope1FactorData> existsScope=scope1FactorRepository.findByFuelTypeAndFuelName(scope1FactorData.getFuelType().trim(),scope1FactorData.getFuelName().trim());
             if (!existsScope.isPresent()) {
@@ -33,17 +34,24 @@ public class Scope1FactorService {
 
             }
             else
-                return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body("Fuel type/ fuel name already exists");;
+                return ResponseEntity.status(HttpStatus.ALREADY_REPORTED)
+                        .body(new ApiResponse("User not found", HttpStatus.ALREADY_REPORTED.value(), "Fuel type/ fuel name already exists"));
+
+
         }catch (Exception e){
             logger.error(e.getMessage());
-            return   ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unable to save data");
+            return  ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse("User not found", HttpStatus.INTERNAL_SERVER_ERROR.value(), "Unable to save data"));
+
         }
 
-        return   ResponseEntity.status(HttpStatus.CREATED).body("scope factor added successfully");
+        return   ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponse("User not found", HttpStatus.CREATED.value(), "scope factor added successfully"));
+
     }
 
 
-    public ResponseEntity<String > updateFactor(Scope1FactorData scope1FactorData){
+    public ResponseEntity<ApiResponse> updateFactor(Scope1FactorData scope1FactorData){
         try {
             Optional<Scope1FactorData> existsFactor= scope1FactorRepository.findByFuelTypeAndFuelName(scope1FactorData.getFuelType().trim(), scope1FactorData.getFuelName().trim());
             if (existsFactor.isPresent()){
@@ -54,26 +62,25 @@ public class Scope1FactorService {
                 factor.setCo2eTotal(scope1FactorData.getCo2eTotal());
                 factor.setUpdateDateString(LocalDate.now().toString());
                 scope1FactorRepository.save(factor);
-            }else return   ResponseEntity.status(HttpStatus.NOT_FOUND).body("unable to find scope factor of "+scope1FactorData.getFuelName());
+            }else return  ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse("User not found", HttpStatus.NOT_FOUND.value(), "unable to find scope factor of "+scope1FactorData.getFuelName()));
+
 
         }catch (Exception e){
 
             logger.error(e.getMessage());
-            return   ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unable to save data");
+            return  ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new ApiResponse("User not found", HttpStatus.BAD_REQUEST.value(), "Unable to save data"));
+
         }
-        return   ResponseEntity.status(HttpStatus.CREATED).body("scope factor  "+scope1FactorData.getFuelName()+"updated successfully");
+        return   ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponse("User not found", HttpStatus.CREATED.value(), "scope factor  "+scope1FactorData.getFuelName()+"updated successfully"));
+
 
     }
 
 
-
-
-
-
-
-
-
-    public ResponseEntity<List<Scope1FactorData>> getFactorData(String fuelName,String fuelType) {
+    public ResponseEntity<ApiResponse> getFactorData(String fuelName,String fuelType) {
         List<Scope1FactorData> fueldata=new ArrayList<>();
         try {
             if (fuelName!=null && !fuelName.isEmpty())
@@ -89,7 +96,9 @@ public class Scope1FactorService {
 
         }
 
-        return ResponseEntity.status(HttpStatus.FOUND).body(fueldata);
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .body(new ApiResponse("User not found", HttpStatus.FOUND.value(), fueldata));
+
     }
 
 

@@ -5,12 +5,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import redswitch.greenledger.project.model.ApiResponse;
 import redswitch.greenledger.project.model.Scope1ActivityDataIngest;
 import redswitch.greenledger.project.model.User;
 import redswitch.greenledger.project.service.Scope1DataIngestService;
 import redswitch.greenledger.project.service.Scope1FactorService;
 
 import java.util.List;
+
+import static org.springframework.http.HttpStatus.NOT_ACCEPTABLE;
+import static org.springframework.http.HttpStatus.OK;
 
 @RestController
 @RequestMapping("/scope1Ingest")
@@ -26,14 +30,17 @@ public class Scope1ActivityIngestController {
     }
 
     @PostMapping("/ingestEmission")
-    public ResponseEntity<String> addData(@RequestBody Scope1ActivityDataIngest scope1ActivityDataIngest,
-                                          @RequestHeader("email") String email){
+    public ResponseEntity<ApiResponse> addData(@RequestBody Scope1ActivityDataIngest scope1ActivityDataIngest
+                                          //@RequestHeader("email") String email
+                                        ){
 
 
         if (scope1ActivityDataIngest.getFuelName()==null || scope1ActivityDataIngest.getFuelName().isEmpty())
-            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("fuel name can't be empty");
+            return ResponseEntity.status(NOT_ACCEPTABLE)
+                    .body(new ApiResponse("failure", NOT_ACCEPTABLE.value(), "fuel name can't be empty"));
 
-        scope1ActivityDataIngest.setEmail(email);
+
+        //scope1ActivityDataIngest.setEmail(email);
 
         return scope1DataIngestService.ingest(scope1ActivityDataIngest);
     }
@@ -41,22 +48,24 @@ public class Scope1ActivityIngestController {
 
 
     @PostMapping("/updateEmission")
-    public ResponseEntity<String> updateEmission(@RequestBody Scope1ActivityDataIngest scope1ActivityDataIngest,
-                                          @RequestHeader("email") String email,
+    public ResponseEntity<ApiResponse> updateEmission(@RequestBody Scope1ActivityDataIngest scope1ActivityDataIngest,
+                                         // @RequestHeader("email") String email,
                                                  @RequestParam(required = false)String id){
 
 
         if (scope1ActivityDataIngest.getFuelName()==null || scope1ActivityDataIngest.getFuelName().isEmpty())
-            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("fuel name can't be empty");
+            return ResponseEntity.status(NOT_ACCEPTABLE)
+                    .body(new ApiResponse("failure", NOT_ACCEPTABLE.value(), "fuel name can't be empty"));
 
-        scope1ActivityDataIngest.setEmail(email);
+
+        //scope1ActivityDataIngest.setEmail(email);
         scope1ActivityDataIngest.setId(id);
         return scope1DataIngestService.update(scope1ActivityDataIngest);
     }
 
     @GetMapping("/getAllIngest")
-    public ResponseEntity<List<Scope1ActivityDataIngest>> getEmission(
-                                            @RequestHeader("email") String email,
+    public ResponseEntity<ApiResponse> getEmission(
+
                                             @RequestParam(required = false)String fuelName,
                                             @RequestParam(required = false)String fuelType,
                                             @RequestParam(required = false)String yearMonth){

@@ -6,8 +6,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import redswitch.greenledger.project.model.JwtFilter;
 import redswitch.greenledger.project.model.JwtUtil;
-
 @EnableMethodSecurity
+
 @Configuration
 public class SecurityConfig {
 
@@ -28,7 +28,19 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/user/login", "/user/addUser").permitAll()
+                        .requestMatchers(
+                                //"/user/login",
+                                "/user/addUser",
+                                "/user/sendOtp",
+                                "/user/verifyOtp",
+                                "/factor/getFactor",
+                                "/factor/addFactor",
+                                "/factor/updateFactor",
+                                "/scope1Ingest/ingestEmission",
+                                "/scope1Ingest/updateEmission",
+                                "/scope1Ingest/getAllIngest"
+
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter,

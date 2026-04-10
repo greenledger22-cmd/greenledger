@@ -60,14 +60,14 @@ public class UserController {
 
 
 
-    @PostMapping("/updateUser/{id}")
+    @PutMapping("/updateUser/{id}")
     public ResponseEntity<ApiResponse> updateUser(@RequestBody User user,
                                           @RequestHeader("email") String email,
                                           @PathVariable("id") String userId){
 
 
 
-        return userService.updateUser(user, userId);
+        return userService.updateUser(user, userId,email);
     }
 
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
@@ -90,7 +90,19 @@ public class UserController {
         return userService.login(request.getUserName(), request.getEmail(), request.getPassword());
     }
 
+    @PostMapping("/sendOtp")
+    public ResponseEntity<ApiResponse> sendOtpEmail(
+                                               @RequestHeader("email") String email
+                                        ){
 
+        return userService.sendOtp(email);
+    }
+    @PostMapping("/verifyOtp")
+    public ResponseEntity<ApiResponse> sendOtp(
+            @RequestHeader("email") String email,@RequestHeader("otp") String otp){
+
+        return userService.verifyOtp(email,otp);
+    }
 
 
     }
