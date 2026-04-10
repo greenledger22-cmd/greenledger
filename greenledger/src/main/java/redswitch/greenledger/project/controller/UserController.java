@@ -4,11 +4,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import redswitch.greenledger.project.dto.LoginRequest;
+import redswitch.greenledger.project.model.ApiResponse;
 import redswitch.greenledger.project.model.User;
 import redswitch.greenledger.project.service.UserService;
 
 import java.util.List;
+
+import static org.springframework.http.HttpStatus.NOT_ACCEPTABLE;
+import static org.springframework.http.HttpStatus.OK;
 
 @RestController
 @RequestMapping("/user")
@@ -23,34 +30,38 @@ public class UserController {
 
 
     @PostMapping("/addUser")
-    public ResponseEntity<String> addUser(@RequestBody User user,
+    public ResponseEntity<ApiResponse> addUser(@RequestBody User user,
                                           @RequestHeader("email") String email){
 
 
         if (user.getName()==null || user.getName().isEmpty())
-            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("user name can't be empty");
+            return ResponseEntity.status(NOT_ACCEPTABLE)
+                    .body(new ApiResponse("user name can't be empty", NOT_ACCEPTABLE.value(), user.getName()));
+
         if (email==null || email.isEmpty())
-            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("user email can't be empty");
+            return ResponseEntity.status(NOT_ACCEPTABLE)
+                .body(new ApiResponse("user email can't be empty", NOT_ACCEPTABLE.value(), user.getEmail()));
+
         else user.setEmail(email);
 
 
         return userService.addUser(user);
     }
-
+    @PreAuthorize("hasAnyRole('USER','ADMIN')")
     @GetMapping("/getAllUser")
-    public ResponseEntity<List<User>> getUser(@RequestParam("id") String userName){
+    public ResponseEntity<ApiResponse> getUser(@RequestParam(value = "name", required = false) String name){
 
-        return userService.getAllUser(userName);
+//        if(name==null || name.isBlank() ){
+//            return   ResponseEntity.badRequest()
+//                    .body(new ApiResponse("Fail", HttpStatus.BAD_REQUEST.value(),"Name can't be blank"));
+//        }
+        return userService.getAllUser(name);
     }
-//    @GetMapping("/getUserById/{id}")
-//    public ResponseEntity<User> getById( @PathVariable("id") String userId){
-//
-//        return userService.getUserById(userId);
-//    }
+
 
 
     @PostMapping("/updateUser/{id}")
-    public ResponseEntity<String> updateUser(@RequestBody User user,
+    public ResponseEntity<ApiResponse> updateUser(@RequestBody User user,
                                           @RequestHeader("email") String email,
                                           @PathVariable("id") String userId){
 
@@ -58,5 +69,28 @@ public class UserController {
 
         return userService.updateUser(user, userId);
     }
+
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<ApiResponse> delete(@PathVariable String id) {
+
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        System.out.println("User: " + auth.getName());
+        System.out.println("Authorities: " + auth.getAuthorities());
+
+        return userService.delete(id);
+    }
+
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse> login(@RequestBody LoginRequest request) {
+
+
+
+        return userService.login(request.getUserName(), request.getEmail(), request.getPassword());
+    }
+
+
+
 
     }
