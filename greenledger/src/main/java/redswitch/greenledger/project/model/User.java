@@ -21,6 +21,7 @@ public class User {
     private String updateDate;
     private String userName;
     private String password;
+    private String updatedBy;
 
 
 

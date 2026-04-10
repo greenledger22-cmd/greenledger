@@ -10,12 +10,15 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import redswitch.greenledger.project.model.ApiResponse;
 import redswitch.greenledger.project.model.Scope1ActivityDataIngest;
 import redswitch.greenledger.project.repository.Scope1DataIngestRepository;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
+import static org.springframework.http.HttpStatus.*;
 
 @Service
 public class Scope1DataIngestService {
@@ -34,13 +37,15 @@ public class Scope1DataIngestService {
 
 
 
-    public ResponseEntity<String> ingest(Scope1ActivityDataIngest scope1ActivityDataIngest){
+    public  ResponseEntity<ApiResponse> ingest(Scope1ActivityDataIngest scope1ActivityDataIngest){
         try {
             Optional<Scope1ActivityDataIngest> scope1ActivityDataIngest1=scope1DataIngestRepository
                     .findByFuelNameAndFuelTypeAndYearMonthContainingIgnoreCase(scope1ActivityDataIngest.getFuelName(),scope1ActivityDataIngest.getFuelType(),scope1ActivityDataIngest.getYearMonth());
 
             if (scope1ActivityDataIngest1.isPresent()){
-                return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body("Fuel type/ fuel name already exists");
+                return  ResponseEntity.status(ALREADY_REPORTED)
+                        .body(new ApiResponse("Invalid password", ALREADY_REPORTED.value(), "Fuel type/ fuel name already exists"));
+
             }else
                scope1DataIngestRepository.insert(scope1ActivityDataIngest);
 
@@ -48,13 +53,16 @@ public class Scope1DataIngestService {
 
         }catch (Exception e){
             logger.error(e.getMessage());
-            return   ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("Unable to save data");
+            return   ResponseEntity.status(NOT_IMPLEMENTED)
+                    .body(new ApiResponse("unextected error", NOT_IMPLEMENTED.value(), "Unable to save data"));
+
         }
-        return   ResponseEntity.status(HttpStatus.CREATED).body("scope factor  "+scope1ActivityDataIngest.getFuelName()+" added successfully");
+        return   ResponseEntity.status(CREATED)
+                .body(new ApiResponse("success", CREATED.value(), "scope factor  "+scope1ActivityDataIngest.getFuelName()+" added successfully"));
 
     }
 
-    public ResponseEntity<String> update(Scope1ActivityDataIngest scope1ActivityDataIngest){
+    public  ResponseEntity<ApiResponse> update(Scope1ActivityDataIngest scope1ActivityDataIngest){
         try {
             Optional<Scope1ActivityDataIngest> scope1ActivityDataIngest1=scope1DataIngestRepository.findById(scope1ActivityDataIngest.getId());
             if (scope1ActivityDataIngest1.isPresent()) {
@@ -64,18 +72,26 @@ public class Scope1DataIngestService {
                 scope1DataIngestRepository.save(updateIngest);
 
             }
-            else  ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("No data found  to update ");
+            else   ResponseEntity.status(NOT_IMPLEMENTED)
+                    .body(new ApiResponse("failure", NOT_IMPLEMENTED.value(), "No data found  to update "));
+
+
 
 
         }catch (Exception e){
             logger.error(e.getMessage());
-            return   ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("Unable to update data");
+            return ResponseEntity.status(NOT_IMPLEMENTED)
+                    .body(new ApiResponse("failure", NOT_IMPLEMENTED.value(), "Unable to update data"));
+
+
         }
-        return   ResponseEntity.status(HttpStatus.CREATED).body(scope1ActivityDataIngest.getFuelName()+"updated successfully");
+        return  ResponseEntity.status(CREATED)
+                .body(new ApiResponse("failure", CREATED.value(), scope1ActivityDataIngest.getFuelName()+"updated successfully"));
+
 
     }
 
-    public ResponseEntity<List<Scope1ActivityDataIngest>> getIngestedData(String fuelName, String fuelType, String yearMonth){
+    public ResponseEntity<ApiResponse> getIngestedData(String fuelName, String fuelType, String yearMonth){
         List<Scope1ActivityDataIngest> allData=new ArrayList<>();
         try {
 
@@ -83,7 +99,9 @@ public class Scope1DataIngestService {
         }catch (Exception e){
             logger.error(e.getMessage());
         }
-        return  ResponseEntity.status(HttpStatus.OK).body(allData);
+        return  ResponseEntity.status(OK)
+                .body(new ApiResponse("success", OK.value(), allData));
+
 
     }
 

@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import redswitch.greenledger.project.model.ApiResponse;
 import redswitch.greenledger.project.model.Scope1FactorData;
 import redswitch.greenledger.project.model.User;
 import redswitch.greenledger.project.service.Scope1FactorService;
@@ -28,13 +29,15 @@ public class Scope1FactorController {
 
 
     @PostMapping("/addFactor")
-    public ResponseEntity<String> addFactorData(@RequestHeader("email") String email,
-                                          @RequestBody Scope1FactorData scope1FactorData) {
+    public  ResponseEntity<ApiResponse> addFactorData(
+                                                      @RequestBody Scope1FactorData scope1FactorData) {
 
-        if (email == null || email.isEmpty())
-            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("user email can't be empty");
-        else if (scope1FactorData.getFuelName().isEmpty() || scope1FactorData.getFuelType().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("factor name or factor type can't be empty");
+
+        if (scope1FactorData.getFuelName().isEmpty() || scope1FactorData.getFuelType().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE)
+                    .body(new ApiResponse("failure", HttpStatus.NOT_ACCEPTABLE.value(), "factor name or factor type can't be empty"));
+
+
         }
 
         return scope1FactorService.addFactor(scope1FactorData);
@@ -42,12 +45,14 @@ public class Scope1FactorController {
 
 
     @PostMapping("/updateFactor")
-    public ResponseEntity<String> updateFactorData(@RequestHeader("email") String email,
+    public  ResponseEntity<ApiResponse> updateFactorData(@RequestHeader("email") String email,
                                                 @RequestBody Scope1FactorData scope1FactorData) {
 
 
         if (scope1FactorData.getFuelName().isEmpty() || scope1FactorData.getFuelType().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body("factor name or factor type can't be empty");
+            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE)
+                    .body(new ApiResponse("failure", HttpStatus.NOT_ACCEPTABLE.value(), "factor name or factor type can't be empty"));
+
         }
 
         return scope1FactorService.updateFactor(scope1FactorData);
@@ -60,8 +65,8 @@ public class Scope1FactorController {
 
 //can find by name or find by fuel type any of these two.
     @GetMapping("/getFactor")
-    public ResponseEntity<List<Scope1FactorData>> getFactorData(@RequestHeader("email") String email,
-                                                                @RequestParam(required = false) String fuelName, @RequestParam(required = false) String fuelType) {
+    public  ResponseEntity<ApiResponse> getFactorData(@RequestParam(required = false) String fuelName,
+                                                      @RequestParam(required = false) String fuelType) {
 
 
 

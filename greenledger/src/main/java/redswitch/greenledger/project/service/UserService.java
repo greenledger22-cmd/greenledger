@@ -2,6 +2,7 @@ package redswitch.greenledger.project.service;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import redswitch.greenledger.project.model.ApiResponse;
@@ -10,10 +11,7 @@ import redswitch.greenledger.project.model.User;
 import redswitch.greenledger.project.repository.UserRepository;
 
 import java.time.LocalDate;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static org.springframework.http.HttpStatus.*;
 
@@ -23,15 +21,16 @@ public class UserService {
     private final BCryptPasswordEncoder encoder;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
-
+    private final EmailService emailService;
     public UserService(UserRepository userRepository,
                        BCryptPasswordEncoder encoder,
-                       JwtUtil jwtUtil) {
+                       JwtUtil jwtUtil,EmailService emailService) {
         this.userRepository = userRepository;
         this.encoder = encoder;
         this.jwtUtil = jwtUtil;
+        this.emailService=emailService;
     }
-
+    final Map<String, String> otpMap = new HashMap<>();
     public ResponseEntity<ApiResponse> addUser(User  user){
 
         if (user!=null && !user.toString().isEmpty()){
@@ -91,14 +90,19 @@ public class UserService {
 
 
 
-    public ResponseEntity<ApiResponse> updateUser(User  user,String userId){
+    public ResponseEntity<ApiResponse> updateUser(User  user,String userId,String email){
 
         Optional<User> userExist = userRepository.findById(userId);
         if (userExist.isPresent()) {
             User userDb=userExist.get();
             LocalDate today = LocalDate.now();
-            //userDb.setRole(user.getRole());
+            userDb.setRole(user.getRole());
+            userDb.setName(user.getName());
+            userDb.setUserName(user.getUserName());
+            userDb.setName(user.getName());
             userDb.setUpdateDate(today.getYear() + "_" + today.getMonth());
+            userDb.setUpdatedBy(email);
+
             BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
             boolean isMatch = encoder.matches(user.getPassword().trim(), userDb.getPassword().trim());
 
@@ -107,7 +111,10 @@ public class UserService {
                         new ApiResponse("same password", HttpStatus.NOT_ACCEPTABLE.value(), userRepository.findAll()));
 
                 }
-            else userRepository.save(userDb);
+            else {
+                userDb.setPassword(encoder.encode(user.getPassword()));
+                userRepository.save(userDb);
+            }
            // System.out.println(userDb.getId());
         }else return ResponseEntity.ok(
                 new ApiResponse("User not found", HttpStatus.NOT_FOUND.value(), null));
@@ -167,6 +174,28 @@ public class UserService {
         userRepository.deleteById(id);
         return ResponseEntity.ok(new ApiResponse( "User deleted successfully", OK.value(), id));
     }
+
+    public ResponseEntity<ApiResponse> sendOtp(String email) {
+        System.out.println("otp");
+        String otp = emailService.generateOtp();
+
+        emailService.saveOtp(otpMap,email,otp);
+        emailService.sendOtp(email,otp);
+        return ResponseEntity.ok(new ApiResponse( "Otp send successfully", OK.value(), email));
+    }
+
+    public ResponseEntity<ApiResponse> verifyOtp(String email,String otp) {
+
+        emailService.getOtp(otpMap,email);
+        emailService.sendOtp(email,otp);
+        return ResponseEntity.ok(new ApiResponse( "Otp validated successfully", OK.value(), email));
+    }
+
+
+
+
+
+
     }
 
 
