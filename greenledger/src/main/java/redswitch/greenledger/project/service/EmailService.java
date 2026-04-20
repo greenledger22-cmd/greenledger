@@ -36,7 +36,4 @@ public class EmailService {
         return otpMap.get(email);
     }
 
-//    public void removeOtp(String email) {
-//        otpMap.remove(email);
-//    }
 }

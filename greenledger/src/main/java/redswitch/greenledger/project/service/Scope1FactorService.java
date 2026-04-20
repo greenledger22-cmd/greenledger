@@ -26,27 +26,28 @@ public class Scope1FactorService {
 
     public ResponseEntity<ApiResponse> addFactor(Scope1FactorData scope1FactorData){
         try {
-             Optional<Scope1FactorData> existsScope=scope1FactorRepository.findByFuelTypeAndFuelName(scope1FactorData.getFuelType().trim(),scope1FactorData.getFuelName().trim());
+             Optional<Scope1FactorData> existsScope=scope1FactorRepository.findByFuelTypeAndFuelNameAndUnitAndYear(scope1FactorData.getFuelType().trim(),scope1FactorData.getFuelName().trim(),scope1FactorData.getUnit(),scope1FactorData.getYear());
             if (!existsScope.isPresent()) {
                 scope1FactorData.setCreationDateString(LocalDate.now().toString());
                 scope1FactorData.setUpdateDateString(LocalDate.now().toString());
+               scope1FactorData.setYear(scope1FactorData.getEmissionStandard().getYear());
                 scope1FactorRepository.insert(scope1FactorData);
 
             }
             else
-                return ResponseEntity.status(HttpStatus.ALREADY_REPORTED)
-                        .body(new ApiResponse("User not found", HttpStatus.ALREADY_REPORTED.value(), "Fuel type/ fuel name already exists"));
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new ApiResponse("Failure", HttpStatus.CONFLICT.value(), "Fuel type/ fuel name already exists"));
 
 
         }catch (Exception e){
             logger.error(e.getMessage());
             return  ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ApiResponse("User not found", HttpStatus.INTERNAL_SERVER_ERROR.value(), "Unable to save data"));
+                    .body(new ApiResponse("Failure", HttpStatus.INTERNAL_SERVER_ERROR.value(), "Unable to save data"));
 
         }
 
         return   ResponseEntity.status(HttpStatus.CREATED)
-                .body(new ApiResponse("User not found", HttpStatus.CREATED.value(), "scope factor added successfully"));
+                .body(new ApiResponse("success", HttpStatus.CREATED.value(), "scope factor added successfully"));
 
     }
 
@@ -96,8 +97,8 @@ public class Scope1FactorService {
 
         }
 
-        return ResponseEntity.status(HttpStatus.FOUND)
-                .body(new ApiResponse("User not found", HttpStatus.FOUND.value(), fueldata));
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(new ApiResponse("success", HttpStatus.OK.value(), fueldata));
 
     }
 

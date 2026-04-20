@@ -43,13 +43,15 @@ public class Scope1DataIngestService {
                     .findByFuelNameAndFuelTypeAndYearMonthContainingIgnoreCase(scope1ActivityDataIngest.getFuelName(),scope1ActivityDataIngest.getFuelType(),scope1ActivityDataIngest.getYearMonth());
 
             if (scope1ActivityDataIngest1.isPresent()){
-                return  ResponseEntity.status(ALREADY_REPORTED)
-                        .body(new ApiResponse("Invalid password", ALREADY_REPORTED.value(), "Fuel type/ fuel name already exists"));
+                return  ResponseEntity.status(CONFLICT)
+                        .body(new ApiResponse("Failure", CONFLICT.value(), "Fuel type/ fuel name already exists"));
 
-            }else
-               scope1DataIngestRepository.insert(scope1ActivityDataIngest);
+            }else {
+                scope1ActivityDataIngest.setYear(scope1ActivityDataIngest.getYearMonth().split("-")[0]);
+                scope1DataIngestRepository.insert(scope1ActivityDataIngest);
+            }
 
-            scope1EmissionReportService.newReport(scope1ActivityDataIngest.getFuelName(),scope1ActivityDataIngest.getFuelType(),scope1ActivityDataIngest.getYearMonth());
+            scope1EmissionReportService.newReport(scope1ActivityDataIngest.getFuelName(),scope1ActivityDataIngest.getFuelType(),scope1ActivityDataIngest.getYearMonth(),scope1ActivityDataIngest.getUnit());
 
         }catch (Exception e){
             logger.error(e.getMessage());
@@ -58,7 +60,7 @@ public class Scope1DataIngestService {
 
         }
         return   ResponseEntity.status(CREATED)
-                .body(new ApiResponse("success", CREATED.value(), "scope factor  "+scope1ActivityDataIngest.getFuelName()+" added successfully"));
+                .body(new ApiResponse("success", CREATED.value(), "report "+scope1ActivityDataIngest.getFuelName()+" ingested successfully"));
 
     }
 
@@ -86,7 +88,7 @@ public class Scope1DataIngestService {
 
         }
         return  ResponseEntity.status(CREATED)
-                .body(new ApiResponse("failure", CREATED.value(), scope1ActivityDataIngest.getFuelName()+"updated successfully"));
+                .body(new ApiResponse("Success", CREATED.value(), scope1ActivityDataIngest.getFuelName()+"updated successfully"));
 
 
     }

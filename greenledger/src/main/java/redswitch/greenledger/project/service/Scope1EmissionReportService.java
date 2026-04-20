@@ -7,23 +7,25 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import redswitch.greenledger.project.model.CsvResponse;
-import redswitch.greenledger.project.model.Scope1ActivityDataIngest;
-import redswitch.greenledger.project.model.Scope1EmissionReport;
-import redswitch.greenledger.project.model.Scope1FactorData;
+import redswitch.greenledger.project.model.*;
 import redswitch.greenledger.project.repository.Scope1DataIngestRepository;
 import redswitch.greenledger.project.repository.Scope1FactorRepository;
 import redswitch.greenledger.project.repository.Scope1ReportRepository;
 
 import java.io.StringWriter;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+
+import static org.springframework.http.HttpStatus.*;
 
 @Service
 public class Scope1EmissionReportService {
@@ -52,16 +54,19 @@ public class Scope1EmissionReportService {
         return mongoTemplate.find(query, Scope1EmissionReport.class);
     }
 
-    public void newReport(String fuelName,String fuelType,String yearMonth){
+    public ResponseEntity<ApiResponse> newReport(String fuelName,String fuelType,String yearMonth,String unit){
+        Scope1ActivityDataIngest existsDataIngest = null;
         try {
             Optional<Scope1ActivityDataIngest> scope1ActivityDataIngest1 = scope1DataIngestRepository
                     .findByFuelNameAndFuelTypeAndYearMonthContainingIgnoreCase(fuelName, fuelType,yearMonth);
 
+            int  year = YearMonth.parse(yearMonth).getYear()-1;
+
             Optional<Scope1FactorData> scope1FactorData = scope1FactorRepository
-                    .findByFuelTypeAndFuelName(fuelType.trim(), fuelName.trim());
+                    .findByFuelTypeAndFuelNameAndUnitAndYear(fuelType.trim(), fuelName.trim(),unit, String.valueOf(year).trim());
 
 
-            Scope1ActivityDataIngest existsDataIngest = null;
+
             Scope1FactorData emissionFactor = null;
 
             if (scope1ActivityDataIngest1.isPresent())
@@ -73,6 +78,8 @@ public class Scope1EmissionReportService {
                 existsDataIngest.setStatus(-5);
                 existsDataIngest.setErrorMsg("No matching factor found for fuel "+scope1FactorData.get().getFuelName());
                 scope1DataIngestRepository.save(existsDataIngest);
+                return  ResponseEntity.status(NOT_FOUND)
+                        .body(new ApiResponse("unextected error", NOT_FOUND.value(), "No matching factor found for fuel, no report data saved"));
             }
 
             Scope1EmissionReport scope1EmissionReport = new Scope1EmissionReport();
@@ -93,8 +100,10 @@ public class Scope1EmissionReportService {
             scope1EmissionReport.setCo2eTotal(existsDataIngest.getQuantity() * emissionFactor.getCo2eTotal());
             scope1EmissionReport.setReportDate(existsDataIngest.getYearMonth());
             scope1EmissionReport.setInputUnit(existsDataIngest.getUnit());
-
+            scope1EmissionReport.setCost(existsDataIngest.getCost());
             scope1EmissionReport.setOutputUnit(emissionFactor.getConvertTo());
+            scope1EmissionReport.setOrgName(existsDataIngest.getOrgName());
+            scope1EmissionReport.setFacilityName(existsDataIngest.getFacilityName());
 
             scope1ReportRepository.insert(scope1EmissionReport);
             existsDataIngest.setStatus(10);
@@ -103,10 +112,28 @@ public class Scope1EmissionReportService {
 
         }catch (Exception e){
             logger.error(e.getMessage());
+            existsDataIngest.setStatus(-5);
+            existsDataIngest.setErrorMsg("Error,No data added in report section");
+            scope1DataIngestRepository.save(existsDataIngest);
+            return  ResponseEntity.status(CONFLICT)
+                    .body(new ApiResponse("Error", CONFLICT.value(), " Error,No data added in report section"));
         }
 
+        return  ResponseEntity.status(OK)
+                .body(new ApiResponse("success", OK.value(), " report data saved"));
+    }
+
+    public ResponseEntity<ApiResponse>  getAllReport(){
+        return  ResponseEntity.ok(
+                new ApiResponse("Success", HttpStatus.OK.value(), scope1ReportRepository.findAll()));
 
     }
+
+
+
+
+
+
 
 
     public CsvResponse generateScope1ReportCsv(String reportType, String startMonth,String endMonth){
@@ -119,7 +146,7 @@ public class Scope1EmissionReportService {
         CSVWriter csvWriter = new CSVWriter(writer);
         System.out.println(reports);
         // Step 1: headers
-        List<String> headers = List.of(
+        List<String> headers = List.of("Source Name","Source Type","Version",
                 "Facility", "Fuel Name", "Fuel Type","Input Fuel","Fuel Cost",
                 "CO2e Total", "CO2 Factor", "CH4 Factor",
                 "N2O Factor", "Input Unit", "Output Unit", "Report Date"
@@ -130,6 +157,11 @@ public class Scope1EmissionReportService {
 
         for (Scope1EmissionReport r : reports) {
             String[] row = new String[]{
+                    safe(r.getScope1FactorData().getEmissionStandard().getName()),
+
+                    safe(r.getScope1FactorData().getEmissionStandard().getSourceType()),
+                    safe(r.getScope1FactorData().getEmissionStandard().getVersion()),
+
                     safe(r.getFacilityName()),
                     safe(r.getFuelName()),
                     safe(r.getFuelType()),

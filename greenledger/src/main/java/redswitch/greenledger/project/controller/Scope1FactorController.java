@@ -65,8 +65,8 @@ public class Scope1FactorController {
 
 //can find by name or find by fuel type any of these two.
     @GetMapping("/getFactor")
-    public  ResponseEntity<ApiResponse> getFactorData(@RequestParam(required = false) String fuelName,
-                                                      @RequestParam(required = false) String fuelType) {
+    public  ResponseEntity<ApiResponse> getFactorData(@RequestParam(required = false,value = "fuelName") String fuelName,
+                                                      @RequestParam(required = false,value = "fuelType") String fuelType) {
 
 
 

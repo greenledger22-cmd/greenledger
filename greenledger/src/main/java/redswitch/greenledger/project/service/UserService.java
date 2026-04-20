@@ -22,13 +22,15 @@ public class UserService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
+    private final TokenBlacklistService tokenBlacklistService;
     public UserService(UserRepository userRepository,
                        BCryptPasswordEncoder encoder,
-                       JwtUtil jwtUtil,EmailService emailService) {
+                       JwtUtil jwtUtil,EmailService emailService, TokenBlacklistService tokenBlacklistService) {
         this.userRepository = userRepository;
         this.encoder = encoder;
         this.jwtUtil = jwtUtil;
         this.emailService=emailService;
+        this.tokenBlacklistService=tokenBlacklistService;
     }
     final Map<String, String> otpMap = new HashMap<>();
     public ResponseEntity<ApiResponse> addUser(User  user){
@@ -53,6 +55,10 @@ public class UserService {
                 return ResponseEntity.status(CONFLICT)
                         .body(new ApiResponse("Email already exists", CONFLICT.value(), exists.get().getEmail()));
 
+            Optional<User> userExists= userRepository.findByUserName(user.getUserName());
+            if (exists.isPresent() && exists.get().getEmail().trim().equals(user.getEmail().trim()))
+                return ResponseEntity.status(CONFLICT)
+                        .body(new ApiResponse("user name already exists", CONFLICT.value(), exists.get().getEmail()));
 
 
             userRepository.insert(user);
@@ -125,11 +131,15 @@ public class UserService {
 
     public ResponseEntity<ApiResponse> login(String userName, String email,String password) {
 
-        Optional<User> userData;
+        Optional<User> userData=null;
         if (email != null) {
             userData = userRepository.findByEmail(email);
         } else {
-            userData = userRepository.findByUserName(userName);
+            try {
+                userData = userRepository.findByUserName(userName);
+            }catch (Exception e){
+                System.out.println(e.getCause()+e.getMessage());
+            }
         }
 
         if (!userData.isPresent() ) {
@@ -191,7 +201,13 @@ public class UserService {
         return ResponseEntity.ok(new ApiResponse( "Otp validated successfully", OK.value(), email));
     }
 
+    public ResponseEntity<ApiResponse> logoutUser(String authHeader) {
 
+        String token = authHeader.substring(7);
+        System.out.println(authHeader);
+        tokenBlacklistService.blacklistToken(token);
+        return ResponseEntity.ok(new ApiResponse( "Otp validated successfully", OK.value(), null));
+    }
 
 
 

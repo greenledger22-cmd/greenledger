@@ -1,5 +1,7 @@
 package redswitch.greenledger.project.controller;
 
+import jakarta.servlet.http.HttpServletRequest;
+import org.apache.tomcat.util.http.parser.Authorization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -47,7 +49,7 @@ public class UserController {
 
         return userService.addUser(user);
     }
-    @PreAuthorize("hasAnyRole('USER','ADMIN')")
+    //@PreAuthorize("hasAnyRole('USER','ADMIN')")
     @GetMapping("/getAllUser")
     public ResponseEntity<ApiResponse> getUser(@RequestParam(value = "name", required = false) String name){
 
@@ -103,6 +105,21 @@ public class UserController {
 
         return userService.verifyOtp(email,otp);
     }
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse> logout(HttpServletRequest request) {
 
+        String authHeader = request.getHeader("Authorization");
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return  ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse("Token not found / No Bearer", HttpStatus.NOT_FOUND.value(), null));
+        }
+
+
+
+//        return ResponseEntity.ok("Logged out successfully");
+
+        return userService.logoutUser(authHeader);
+    }
 
     }

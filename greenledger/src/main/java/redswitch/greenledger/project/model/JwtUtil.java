@@ -8,6 +8,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import static javax.crypto.Cipher.SECRET_KEY;
+
 @Component
 public class JwtUtil {
 
@@ -37,6 +39,10 @@ public class JwtUtil {
                 .getBody()
                 .getSubject();
     }
+    private Key getSignKey() {
+        return Keys.hmacShaKeyFor(SECRET.getBytes());
+    }
+    
 
     public String extractRole(String token) {
         return (String) extractAllClaims(token).get("role");
