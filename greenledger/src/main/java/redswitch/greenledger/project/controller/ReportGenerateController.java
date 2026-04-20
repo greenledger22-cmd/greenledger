@@ -2,15 +2,15 @@ package redswitch.greenledger.project.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import redswitch.greenledger.project.model.ApiResponse;
 import redswitch.greenledger.project.model.CsvResponse;
-import redswitch.greenledger.project.model.Scope1FactorData;
-import redswitch.greenledger.project.service.Scope1DataIngestService;
 import redswitch.greenledger.project.service.Scope1EmissionReportService;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping("/report")
@@ -23,19 +23,20 @@ public class ReportGenerateController {
         this.scope1EmissionReportService = scope1EmissionReportService;
     }
 
-    @PostMapping("/getAllReport")
-    public String getReport(@RequestBody String reportType,
-                            @RequestBody String startMonth,
-                            @RequestBody String endMonth) {
+    @GetMapping("/getAllReport/{reportType}")
+    public ResponseEntity<ApiResponse> getReport(@PathVariable String reportType,
+                                                 @RequestParam(required = false) String startMonth,
+                                                 @RequestParam(required = false) String endMonth
+    ) {
         //String csvData = scope1EmissionReportService.generateScope1ReportCsv();
 
-        return "";
+        return scope1EmissionReportService.getAllReport();
     }
 
     @GetMapping("/GenerateReport/{reportType}")
     public ResponseEntity<byte[]> getScope1Report(@PathVariable   String reportType,
-                                  @RequestParam   String startMonth,
-                                  @PathVariable   String endMonth) {
+                                                  @RequestParam(required = false,value = "startMonth")   String startMonth,
+                                                  @RequestParam(required = false,value = "endMonth")   String endMonth) {
 
         if (startMonth.compareTo(endMonth) > 0) {
             throw new IllegalArgumentException("Invalid date range");
@@ -68,8 +69,10 @@ public class ReportGenerateController {
     }
 
 //    @GetMapping("/allReport")
-//    public ResponseEntity<List<>> getScope1Report() {
-//        return
+//    public ResponseEntity<ApiResponse> getScope1Report() {
+//        var auth = SecurityContextHolder.getContext().getAuthentication();
+//
+//        return ;
 //    }
 
 
