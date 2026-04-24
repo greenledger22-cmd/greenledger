@@ -45,7 +45,7 @@ public class Scope1ActivityIngestController {
 
            if(inputYm.isAfter(currentYm)) {
 
-                ResponseEntity.status(NOT_ACCEPTABLE)
+                return ResponseEntity.status(NOT_ACCEPTABLE)
                         .body(new ApiResponse("failure", NOT_ACCEPTABLE.value(), "Year can't be future"));
             }
         } catch (Exception e) {

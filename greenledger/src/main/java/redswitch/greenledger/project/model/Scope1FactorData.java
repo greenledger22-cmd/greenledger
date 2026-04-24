@@ -22,12 +22,13 @@ public class Scope1FactorData {
     private double co2Factor;
     private double ch4Factor;
     private double n2oFactor;
-    private String facilityName;
+    //private String facilityName;
     private EmissionStandard emissionStandard;
     private String year;
     private String convertTo;
     private String creationDateString;
     private String UpdateDateString;
+    private String Updatedby;
 
 
 

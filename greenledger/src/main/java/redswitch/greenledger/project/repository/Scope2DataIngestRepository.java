@@ -13,6 +13,8 @@ import java.util.Optional;
 public interface Scope2DataIngestRepository  extends MongoRepository<Scope2ActivityDataIngest,String> {
 
     //@Query()
-    Optional<Scope2ActivityDataIngest> findByEmissionTypeAndYearMonth(String emissionType, String yearMonth);
+    //Optional<Scope2ActivityDataIngest> findByEmissionTypeAndYearMonth(String emissionType, String yearMonth);
+    Optional<Scope2ActivityDataIngest> findByYearMonthAndOrgNameAndFacilityNameAndStatus(String yearMonth, String org,String facility,int stts);
+
 
 }

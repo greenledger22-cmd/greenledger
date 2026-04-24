@@ -10,10 +10,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import redswitch.greenledger.project.model.ApiResponse;
 import redswitch.greenledger.project.model.Scope1ActivityDataIngest;
 import redswitch.greenledger.project.model.Scope2ActivityDataIngest;
+import redswitch.greenledger.project.model.Scope2Factor;
 import redswitch.greenledger.project.repository.Scope1DataIngestRepository;
 import redswitch.greenledger.project.repository.Scope2DataIngestRepository;
+import redswitch.greenledger.project.repository.Scope2FactorRepository;
 
 import java.time.*;
 import java.util.ArrayList;
@@ -21,6 +24,8 @@ import java.util.List;
 import java.util.Optional;
 
 import static java.time.ZoneOffset.UTC;
+import static org.springframework.http.HttpStatus.*;
+import static org.springframework.http.HttpStatus.NOT_IMPLEMENTED;
 
 @Service
 public class Scope2DataIngestService {
@@ -28,77 +33,93 @@ public class Scope2DataIngestService {
     private static final Logger logger = LoggerFactory.getLogger(Scope2DataIngestService.class);
     @Autowired
     MongoTemplate mongoTemplate = null;
+    private final Scope2FactorRepository scope2FactorRepository;
     private final Scope2DataIngestRepository scope2DataIngestRepository;
-
-    public Scope2DataIngestService(Scope2DataIngestRepository scope2DataIngestRepository
-                                   //Scope1EmissionReportService scope1EmissionReportService
-    ) {
+    private final Scope2EmissionReportService scope2EmissionReportService;
+    public Scope2DataIngestService(Scope2DataIngestRepository scope2DataIngestRepository,Scope2EmissionReportService scope2EmissionReportService,
+                                   Scope2FactorRepository scope2FactorRepository) {
         this.scope2DataIngestRepository = scope2DataIngestRepository;
-        //this.scope1EmissionReportService = scope1EmissionReportService;
+        this.scope2EmissionReportService = scope2EmissionReportService;
+        this.scope2FactorRepository=scope2FactorRepository;
     }
 
-    public ResponseEntity<String> ingest(Scope2ActivityDataIngest scope2ActivityDataIngest){
-        try {
-            Optional<Scope2ActivityDataIngest> scope2ActivityDataIngest1=scope2DataIngestRepository
-                    .findByEmissionTypeAndYearMonth(scope2ActivityDataIngest.getEmissionType(),scope2ActivityDataIngest.getYearMonth());
+        public ResponseEntity<ApiResponse> ingest(Scope2ActivityDataIngest scope2ActivityDataIngest){
+            try {
+                Optional<Scope2ActivityDataIngest> scope2ActivityDataIngest1=scope2DataIngestRepository
+                        .findByYearMonthAndOrgNameAndFacilityNameAndStatus(scope2ActivityDataIngest.getYearMonth(),scope2ActivityDataIngest.getOrgName(),scope2ActivityDataIngest.getFacilityName(),10);
+                Scope2ActivityDataIngest saved;
+                if (scope2ActivityDataIngest1.isPresent()){
+                    return  ResponseEntity.status(CONFLICT)
+                            .body(new ApiResponse("Failure", CONFLICT.value(), "Fuel type/ fuel name already exists"));
 
-            if (scope2ActivityDataIngest1.isPresent()){
-                return ResponseEntity.status(HttpStatus.ALREADY_REPORTED).body("Fuel type/ fuel name already exists");
-            }else {
-                try {
-                    LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
-                    scope2ActivityDataIngest.setCreateDate(todayUtc);
-                    scope2ActivityDataIngest.setUpdateDate(todayUtc);
-                    LocalDate date = LocalDate.parse(scope2ActivityDataIngest.getReportDate().toString());
-//                    Instant endOfDay = date
-//                            .atTime(LocalTime.MAX)   // 23:59:59.999999999
-//                            .toInstant(ZoneOffset.UTC);
-                    System.out.println(date +"  "+ scope2ActivityDataIngest.getReportDate());
-                    scope2ActivityDataIngest.setReportDate(date);
-                    scope2DataIngestRepository.insert(scope2ActivityDataIngest);
-                }catch (Exception e){
-                    logger.error(e.getMessage());
-                    return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("Unable to save data");
+                }else {
+
+                        LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+                        scope2ActivityDataIngest.setCreateDate(todayUtc);
+                        scope2ActivityDataIngest.setUpdateDate(todayUtc);
+                        scope2ActivityDataIngest.setYear(scope2ActivityDataIngest.getYearMonth().split("-")[0]);
+                        scope2ActivityDataIngest.setStatus(0);
+                       // LocalDate date = LocalDate.parse(scope2ActivityDataIngest.getReportDate().toString());
+    //                    Instant endOfDay = date
+    //                            .atTime(LocalTime.MAX)   // 23:59:59.999999999
+    //                            .toInstant(ZoneOffset.UTC);
+                        //System.out.println(date +"  "+ scope2ActivityDataIngest.getReportDate());
+                        //scope2ActivityDataIngest.setReportDate(date);
+
+
+                     saved=scope2DataIngestRepository.insert(scope2ActivityDataIngest);
+
                 }
-            }
-
-            //scope1EmissionReportService.newReport(scope1ActivityDataIngest.getFuelName(),scope1ActivityDataIngest.getFuelType(),scope1ActivityDataIngest.getYearMonth());
-
-        }catch (Exception e){
-            logger.error(e.getMessage());
-            return   ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("Unable to save data");
-        }
-        return   ResponseEntity.status(HttpStatus.CREATED).body(scope2ActivityDataIngest.getEmissionType()+" added successfully");
-
-    }
+                scope2EmissionReportService.newReport(saved);
 
 
-    public ResponseEntity<String> update(Scope2ActivityDataIngest scope2ActivityDataIngest){
-        try {
-            Optional<Scope2ActivityDataIngest> scope2ActivityDataIngest1=scope2DataIngestRepository.findById(scope2ActivityDataIngest.getId());
-            if (scope2ActivityDataIngest1.isPresent()) {
-                Scope2ActivityDataIngest updateIngest=scope2ActivityDataIngest1.get();
-                updateIngest.setAmount(scope2ActivityDataIngest.getAmount());
-                updateIngest.setQuantityConsume(scope2ActivityDataIngest.getQuantityConsume());
-                updateIngest.setEmissionType(scope2ActivityDataIngest.getEmissionType());
-                updateIngest.setUnit(scope2ActivityDataIngest.getUnit());
-                updateIngest.setYearMonth(scope2ActivityDataIngest.getYearMonth());
-                LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
-                updateIngest.setUpdateDate(todayUtc);
-
-                scope2DataIngestRepository.save(updateIngest);
+            }catch (Exception e){
+                logger.error(e.getMessage());
+                return  ResponseEntity.status(CONFLICT)
+                        .body(new ApiResponse("Failure", CONFLICT.value(), "Unable to save data"));
 
             }
-            else  ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("No data found  to update ");
+            return  ResponseEntity.status(CREATED)
+                    .body(new ApiResponse("Success", CREATED.value(), "Ingested successfully"));
 
 
-        }catch (Exception e){
-            logger.error(e.getMessage());
-            return   ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body("Unable to update data");
         }
-        return   ResponseEntity.status(HttpStatus.CREATED).body(scope2ActivityDataIngest.getEmissionType()+"updated successfully");
 
-    }
+
+        public ResponseEntity<ApiResponse> update(Scope2ActivityDataIngest scope2ActivityDataIngest){
+            try {
+                Optional<Scope2ActivityDataIngest> scope2ActivityDataIngest1=scope2DataIngestRepository.findById(scope2ActivityDataIngest.getId());
+                if (scope2ActivityDataIngest1.isPresent()) {
+                    Scope2ActivityDataIngest updateIngest=scope2ActivityDataIngest1.get();
+                   // updateIngest.setAmount(scope2ActivityDataIngest.getAmount());
+                    updateIngest.setQuantityConsume(scope2ActivityDataIngest.getQuantityConsume());
+                    //updateIngest.setEmissionType(scope2ActivityDataIngest.getEmissionType());
+                    //updateIngest.setUnit(scope2ActivityDataIngest.getUnit());
+                    updateIngest.setYearMonth(scope2ActivityDataIngest.getYearMonth());
+                    updateIngest.setYear(scope2ActivityDataIngest.getYear());
+                    LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+                    updateIngest.setUpdateDate(todayUtc);
+
+                    scope2DataIngestRepository.save(updateIngest);
+
+                }
+                else
+                    return ResponseEntity.status(NOT_IMPLEMENTED)
+                            .body(new ApiResponse("failure", NOT_IMPLEMENTED.value(), "No data found  to update "));
+
+
+
+            }catch (Exception e){
+                logger.error(e.getMessage());
+                return ResponseEntity.status(NOT_IMPLEMENTED)
+                        .body(new ApiResponse("failure", NOT_IMPLEMENTED.value(), "Unable to update data"));
+
+            }
+            return  ResponseEntity.status(CREATED)
+                    .body(new ApiResponse("Success", CREATED.value(), "updated successfully"));
+
+
+        }
 
     public ResponseEntity<List<Scope2ActivityDataIngest>> getIngestedData(String emissionType,String yearMonth){
         List<Scope2ActivityDataIngest> allData=new ArrayList<>();
@@ -133,7 +154,20 @@ public class Scope2DataIngestService {
 
 
     }
+    public ResponseEntity<ApiResponse> addfactor(Scope2Factor scope2Factor){
 
+        scope2FactorRepository.insert(scope2Factor);
+        return  ResponseEntity.status(CREATED)
+                .body(new ApiResponse("Success", CREATED.value(), "scope 2 factor added successfully"));
+
+    }
+    public ResponseEntity<ApiResponse> getFactor(){
+
+
+        return  ResponseEntity.status(OK)
+                .body(new ApiResponse("Success", OK.value(), scope2FactorRepository.findAll()));
+
+    }
 
 
 
