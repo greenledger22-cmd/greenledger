@@ -15,7 +15,7 @@ import java.util.Optional;
 public interface Scope1DataIngestRepository extends MongoRepository<Scope1ActivityDataIngest,String> {
 
 
-    Optional<Scope1ActivityDataIngest> findByFuelNameAndFuelTypeAndYearMonthContainingIgnoreCase(String fuelName, String fuelType,String yearMont);
+    Optional<Scope1ActivityDataIngest> findByFuelNameAndFuelTypeAndYearMonthAndStatus(String fuelName, String fuelType,String yearMont,int stts);
 
 
 }

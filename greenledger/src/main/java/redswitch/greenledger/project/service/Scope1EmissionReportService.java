@@ -58,7 +58,7 @@ public class Scope1EmissionReportService {
         Scope1ActivityDataIngest existsDataIngest = null;
         try {
             Optional<Scope1ActivityDataIngest> scope1ActivityDataIngest1 = scope1DataIngestRepository
-                    .findByFuelNameAndFuelTypeAndYearMonthContainingIgnoreCase(fuelName, fuelType,yearMonth);
+                    .findByFuelNameAndFuelTypeAndYearMonthAndStatus(fuelName, fuelType,yearMonth,0);
 
             int  year = YearMonth.parse(yearMonth).getYear()-1;
 
@@ -76,10 +76,10 @@ public class Scope1EmissionReportService {
                 emissionFactor = scope1FactorData.get();//got factor  data
             else {
                 existsDataIngest.setStatus(-5);
-                existsDataIngest.setErrorMsg("No matching factor found for fuel "+scope1FactorData.get().getFuelName());
+                existsDataIngest.setErrorMsg("No matching factor found for fuel "+existsDataIngest.getFuelName());
+                //System.out.println("insoide newReport() catch, runtime excep thrown ");
                 scope1DataIngestRepository.save(existsDataIngest);
-                return  ResponseEntity.status(NOT_FOUND)
-                        .body(new ApiResponse("unextected error", NOT_FOUND.value(), "No matching factor found for fuel, no report data saved"));
+                //throw  new  RuntimeException( "No matching factor found for fuel, no report data saved");
             }
 
             Scope1EmissionReport scope1EmissionReport = new Scope1EmissionReport();
@@ -101,10 +101,16 @@ public class Scope1EmissionReportService {
             scope1EmissionReport.setReportDate(existsDataIngest.getYearMonth());
             scope1EmissionReport.setInputUnit(existsDataIngest.getUnit());
             scope1EmissionReport.setCost(existsDataIngest.getCost());
-            scope1EmissionReport.setOutputUnit(emissionFactor.getConvertTo());
+
+            String outputUnit=emissionFactor.getConvertTo();
+            if (outputUnit.equalsIgnoreCase("kg")) {
+                scope1EmissionReport.setOutputUnit("tonne");
+                scope1EmissionReport.setCo2eTotal(scope1EmissionReport.getCo2eTotal()/1000.0);
+            }
+
             scope1EmissionReport.setOrgName(existsDataIngest.getOrgName());
             scope1EmissionReport.setFacilityName(existsDataIngest.getFacilityName());
-
+            scope1EmissionReport.setIngest_reference_id(existsDataIngest.getId());
             scope1ReportRepository.insert(scope1EmissionReport);
             existsDataIngest.setStatus(10);
             scope1DataIngestRepository.save(existsDataIngest);
@@ -115,17 +121,15 @@ public class Scope1EmissionReportService {
             existsDataIngest.setStatus(-5);
             existsDataIngest.setErrorMsg("Error,No data added in report section");
             scope1DataIngestRepository.save(existsDataIngest);
-            return  ResponseEntity.status(CONFLICT)
-                    .body(new ApiResponse("Error", CONFLICT.value(), " Error,No data added in report section"));
+            throw new RuntimeException( " Error,No data added in report section"+e.getMessage());
         }
 
-        return  ResponseEntity.status(OK)
-                .body(new ApiResponse("success", OK.value(), " report data saved"));
+        return  ResponseEntity.status(CREATED)
+                .body(new ApiResponse("success", CREATED.value(), " report data saved"));
     }
 
-    public ResponseEntity<ApiResponse>  getAllReport(){
-        return  ResponseEntity.ok(
-                new ApiResponse("Success", HttpStatus.OK.value(), scope1ReportRepository.findAll()));
+    public List<Scope1EmissionReport>  getAllReport(){
+        return  scope1ReportRepository.findAll();
 
     }
 
@@ -146,10 +150,10 @@ public class Scope1EmissionReportService {
         CSVWriter csvWriter = new CSVWriter(writer);
         System.out.println(reports);
         // Step 1: headers
-        List<String> headers = List.of("Source Name","Source Type","Version",
-                "Facility", "Fuel Name", "Fuel Type","Input Fuel","Fuel Cost",
-                "CO2e Total", "CO2 Factor", "CH4 Factor",
-                "N2O Factor", "Input Unit", "Output Unit", "Report Date"
+        List<String> headers = List.of("Emission factor source","GWP Basis","Version",
+                "Facility", "Fuel Name", "Fuel Type","Input Fuel","Fuel Cost","Cost Currency",
+                "CO2 Factor", "CH4 Factor","N2O Factor","CO2e Total", "Input Unit", "Output Unit", "Report Date"
+
         );
 
         csvWriter.writeNext(headers.toArray(new String[0]));
@@ -157,9 +161,9 @@ public class Scope1EmissionReportService {
 
         for (Scope1EmissionReport r : reports) {
             String[] row = new String[]{
-                    safe(r.getScope1FactorData().getEmissionStandard().getName()),
+                    safe(r.getScope1FactorData().getEmissionStandard().getSource()),
 
-                    safe(r.getScope1FactorData().getEmissionStandard().getSourceType()),
+                    safe(r.getScope1FactorData().getEmissionStandard().getGwpBasis()),
                     safe(r.getScope1FactorData().getEmissionStandard().getVersion()),
 
                     safe(r.getFacilityName()),
@@ -167,10 +171,11 @@ public class Scope1EmissionReportService {
                     safe(r.getFuelType()),
                     String.valueOf(r.getActivityData().getQuantity()),
                     String.valueOf(r.getCost()),
-                    String.valueOf(r.getCo2eTotal()),
+                    String.valueOf("Rs"),
                     String.valueOf(r.getCo2Factor()),
                     String.valueOf(r.getCh4Factor()),
                     String.valueOf(r.getN2oFactor()),
+                    String.valueOf(r.getCo2eTotal()),
                     safe(r.getInputUnit()),
                     safe(r.getOutputUnit()),
                     safe(r.getReportDate())

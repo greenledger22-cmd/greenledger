@@ -14,6 +14,8 @@ import redswitch.greenledger.project.model.ApiResponse;
 import redswitch.greenledger.project.model.Scope1ActivityDataIngest;
 import redswitch.greenledger.project.repository.Scope1DataIngestRepository;
 
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -40,7 +42,7 @@ public class Scope1DataIngestService {
     public  ResponseEntity<ApiResponse> ingest(Scope1ActivityDataIngest scope1ActivityDataIngest){
         try {
             Optional<Scope1ActivityDataIngest> scope1ActivityDataIngest1=scope1DataIngestRepository
-                    .findByFuelNameAndFuelTypeAndYearMonthContainingIgnoreCase(scope1ActivityDataIngest.getFuelName(),scope1ActivityDataIngest.getFuelType(),scope1ActivityDataIngest.getYearMonth());
+                    .findByFuelNameAndFuelTypeAndYearMonthAndStatus(scope1ActivityDataIngest.getFuelName(),scope1ActivityDataIngest.getFuelType(),scope1ActivityDataIngest.getYearMonth(),10);
 
             if (scope1ActivityDataIngest1.isPresent()){
                 return  ResponseEntity.status(CONFLICT)
@@ -48,6 +50,10 @@ public class Scope1DataIngestService {
 
             }else {
                 scope1ActivityDataIngest.setYear(scope1ActivityDataIngest.getYearMonth().split("-")[0]);
+                scope1ActivityDataIngest.setStatus(0);
+                LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+                scope1ActivityDataIngest.setCreateDate(todayUtc);
+                scope1ActivityDataIngest.setUpdateDate(todayUtc);
                 scope1DataIngestRepository.insert(scope1ActivityDataIngest);
             }
 
@@ -55,8 +61,9 @@ public class Scope1DataIngestService {
 
         }catch (Exception e){
             logger.error(e.getMessage());
+            System.out.println("insoide service catch");
             return   ResponseEntity.status(NOT_IMPLEMENTED)
-                    .body(new ApiResponse("unextected error", NOT_IMPLEMENTED.value(), "Unable to save data"));
+                    .body(new ApiResponse("unextected error", NOT_IMPLEMENTED.value(), "Unable to save data"+ e.getMessage()));
 
         }
         return   ResponseEntity.status(CREATED)
@@ -71,10 +78,16 @@ public class Scope1DataIngestService {
                 Scope1ActivityDataIngest updateIngest=scope1ActivityDataIngest1.get();
                 updateIngest.setQuantity(scope1ActivityDataIngest.getQuantity());
                 updateIngest.setUnit(scope1ActivityDataIngest.getUnit());
+                updateIngest.setYearMonth(scope1ActivityDataIngest.getYearMonth());
+                updateIngest.setYear(scope1ActivityDataIngest.getYear());
+
+                LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+                updateIngest.setUpdateDate(todayUtc);
                 scope1DataIngestRepository.save(updateIngest);
 
             }
-            else   ResponseEntity.status(NOT_IMPLEMENTED)
+            else
+                return ResponseEntity.status(NOT_IMPLEMENTED)
                     .body(new ApiResponse("failure", NOT_IMPLEMENTED.value(), "No data found  to update "));
 
 

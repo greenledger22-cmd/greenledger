@@ -1,13 +1,19 @@
 package redswitch.greenledger.project.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mail.SimpleMailMessage;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import redswitch.greenledger.project.dto.LoginRequest;
 import redswitch.greenledger.project.model.ApiResponse;
 import redswitch.greenledger.project.model.JwtUtil;
+import redswitch.greenledger.project.model.SuperUserAdmin;
 import redswitch.greenledger.project.model.User;
+import redswitch.greenledger.project.repository.SuperUserRepository;
 import redswitch.greenledger.project.repository.UserRepository;
 
 import java.time.LocalDate;
@@ -17,22 +23,27 @@ import static org.springframework.http.HttpStatus.*;
 
 @Service
 public class UserService {
-
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
     private final BCryptPasswordEncoder encoder;
     private final UserRepository userRepository;
+    private final SuperUserRepository superUserRepository;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
     private final TokenBlacklistService tokenBlacklistService;
+    final Map<String, String> otpMap = new HashMap<>();
     public UserService(UserRepository userRepository,
                        BCryptPasswordEncoder encoder,
-                       JwtUtil jwtUtil,EmailService emailService, TokenBlacklistService tokenBlacklistService) {
+                       JwtUtil jwtUtil,EmailService emailService, TokenBlacklistService tokenBlacklistService,
+                       SuperUserRepository superUserRepository) {
         this.userRepository = userRepository;
         this.encoder = encoder;
         this.jwtUtil = jwtUtil;
         this.emailService=emailService;
         this.tokenBlacklistService=tokenBlacklistService;
+        this.superUserRepository=superUserRepository;
     }
-    final Map<String, String> otpMap = new HashMap<>();
+
+
     public ResponseEntity<ApiResponse> addUser(User  user){
 
         if (user!=null && !user.toString().isEmpty()){
@@ -58,7 +69,7 @@ public class UserService {
             Optional<User> userExists= userRepository.findByUserName(user.getUserName());
             if (exists.isPresent() && exists.get().getEmail().trim().equals(user.getEmail().trim()))
                 return ResponseEntity.status(CONFLICT)
-                        .body(new ApiResponse("user name already exists", CONFLICT.value(), exists.get().getEmail()));
+                        .body(new ApiResponse("user name already exists", CONFLICT.value(), userExists.get().getEmail()));
 
 
             userRepository.insert(user);
@@ -69,15 +80,57 @@ public class UserService {
                 new ApiResponse("user added successfully", HttpStatus.CREATED.value(), user));
     }
 
+    public ResponseEntity<ApiResponse> addSuper(SuperUserAdmin user) {
+        try {
+            if (user != null && !user.toString().isEmpty()) {
+                String generatedId =  user.getEmail().replace("@", "_").replace(".", "_") + "_" + user.getName();
+                user.setId(generatedId);
+                LocalDate today=LocalDate.now();
+                user.setLastLogin(today.toString());
+                user.setLastLoginDate(today);
+                BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+                String rawPassword = user.getPassword();
+
+                // Encode (hash)
+                String encodedPassword = encoder.encode(rawPassword);
+                user.setPassword(encodedPassword.trim());
+                Optional<User> exists = userRepository.findByEmail(user.getEmail());
+                if (exists.isPresent() && exists.get().getEmail().trim().equals(user.getEmail().trim()))
+                    return ResponseEntity.status(CONFLICT)
+                            .body(new ApiResponse("Email already exists", CONFLICT.value(), exists.get().getEmail()));
+
+                Optional<User> userExists = userRepository.findByUserName(user.getName());
+                if (exists.isPresent() && exists.get().getEmail().trim().equals(user.getEmail().trim()))
+                    return ResponseEntity.status(CONFLICT)
+                            .body(new ApiResponse("user name already exists", CONFLICT.value(), userExists.get().getEmail()));
+
+
+                superUserRepository.insert(user);
+            }
+        }catch (Exception e){
+        logger.error(e.getMessage());
+            return   ResponseEntity.status(NOT_ACCEPTABLE).body(
+                    new ApiResponse("unable to add super user", HttpStatus.NOT_ACCEPTABLE.value(), user));
+        }
+
+
+        return   ResponseEntity.ok(
+                new ApiResponse("user added successfully", HttpStatus.CREATED.value(), user));
+    }
+
+
+
+
     public ResponseEntity<ApiResponse> getAllUser(String userName){
-                if(userName!=null && !userName.isBlank() ){
-                    return  ResponseEntity.ok(
+        if(userName!=null && !userName.isBlank() ){
+            return  ResponseEntity.ok(
 
-                            new ApiResponse("Success", HttpStatus.OK.value(),
-                                    Collections.singletonList(userRepository.findByName(userName))
+                    new ApiResponse("Success", HttpStatus.OK.value(),
+                            Collections.singletonList(userRepository.findByName(userName))
 
-                            ));
-                }
+                    ));
+        }
 
         return  ResponseEntity.ok(
                 new ApiResponse("Success", HttpStatus.OK.value(), userRepository.findAll()));
@@ -96,7 +149,7 @@ public class UserService {
 
 
 
-    public ResponseEntity<ApiResponse> updateUser(User  user,String userId,String email){
+    public ResponseEntity<ApiResponse> updateUser(User  user, String userId, Authentication authentication){
 
         Optional<User> userExist = userRepository.findById(userId);
         if (userExist.isPresent()) {
@@ -107,7 +160,7 @@ public class UserService {
             userDb.setUserName(user.getUserName());
             userDb.setName(user.getName());
             userDb.setUpdateDate(today.getYear() + "_" + today.getMonth());
-            userDb.setUpdatedBy(email);
+            userDb.setUpdatedBy(authentication.getName());
 
             BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
             boolean isMatch = encoder.matches(user.getPassword().trim(), userDb.getPassword().trim());
@@ -131,21 +184,26 @@ public class UserService {
 
     public ResponseEntity<ApiResponse> login(String userName, String email,String password) {
 
-        Optional<User> userData=null;
+        Optional<User> userData = null;
         if (email != null) {
             userData = userRepository.findByEmail(email);
         } else {
             try {
                 userData = userRepository.findByUserName(userName);
-            }catch (Exception e){
-                System.out.println(e.getCause()+e.getMessage());
+            } catch (Exception e) {
+                System.out.println(e.getCause() + e.getMessage());
             }
         }
 
-        if (!userData.isPresent() ) {
+
+        if (!userData.isPresent()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(new ApiResponse("User not found", HttpStatus.NOT_FOUND.value(), null));
         }
+
+
+
+
         User user=userData.get();
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         if (!encoder.matches(password, user.getPassword())) {
@@ -173,6 +231,81 @@ public class UserService {
         return ResponseEntity.status(OK)
                 .body(new ApiResponse("User authenticated", OK.value(),token ));
     }
+
+    public ResponseEntity<ApiResponse> superAdminLogin(LoginRequest request) {
+
+        Optional<SuperUserAdmin> userData = null;
+        if (request.getEmail() != null) {
+            userData = superUserRepository.findByEmail(request.getEmail());
+        } else {
+            try {
+                userData = superUserRepository.findByUserName(request.getEmail());
+            } catch (Exception e) {
+                System.out.println(e.getCause() + e.getMessage());
+            }
+        }
+
+
+        if (!userData.isPresent()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new ApiResponse("User not found", HttpStatus.NOT_FOUND.value(), null));
+        }
+
+
+
+        if (!userData.get().getRole().name().equals("SUPER_ADMIN")) {
+
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new ApiResponse("failure", 403, "Access denied: Not a super admin"));
+        }
+
+
+
+
+
+
+        SuperUserAdmin user=userData.get();
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        if (!encoder.matches(request.getPassword(), user.getPassword())) {
+            return ResponseEntity.status(UNAUTHORIZED)
+                    .body(new ApiResponse("Invalid password", HttpStatus.UNAUTHORIZED.value(), user.getPassword()));
+        }
+
+        String token="";
+        //jwt token
+        if (request.getEmail()!=null && !request.getEmail().isEmpty())
+            token = jwtUtil.generateToken(
+                    user.getEmail(),
+                    user.getRole().name()
+            );
+        else if(request.getUserName()!=null && !request.getUserName().isEmpty())
+            token = jwtUtil.generateToken(
+                    user.getUserName(),
+                    user.getRole().name()
+            );
+
+        Optional<SuperUserAdmin> existUser= Optional.empty();
+        if (user.getUserName()!=null && !user.getUserName().isEmpty())
+            existUser=superUserRepository.findByUserName(user.getUserName());
+        else if (user.getEmail()!=null && !user.getEmail().isEmpty())
+            existUser=superUserRepository.findByEmail(user.getEmail());
+
+        existUser.get().setLastLogin(LocalDate.now().toString());
+
+        superUserRepository.save(existUser.get());
+
+
+
+        return ResponseEntity.status(OK)
+                .body(new ApiResponse("User authenticated", OK.value(),token ));
+    }
+
+
+
+
+
+
+
 
     public ResponseEntity<ApiResponse> delete(String id) {
 

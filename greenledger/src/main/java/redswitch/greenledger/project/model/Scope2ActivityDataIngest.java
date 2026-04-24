@@ -18,20 +18,26 @@ public class Scope2ActivityDataIngest {
     private String id;
 
     //private String emissionCategory;
-    private String emissionType;
+   // private String emissionType;
     private double quantityConsume;
     private String unit;
-    private double amount;
-    private String amountType;
+    private String fuelName;
+    //private double amount;
+   // private String amountType;
     private String outputUnit;
     private Double cost;
+    private String facilityName;
+    private String orgName;
     private String email;
     private String yearMonth;
+    private String year;
     private int status;
     private String errorMsg;
     private LocalDate createDate;
     private LocalDate reportDate;
+
     private LocalDate updateDate;
+    private String updatedby;
 
 
 }

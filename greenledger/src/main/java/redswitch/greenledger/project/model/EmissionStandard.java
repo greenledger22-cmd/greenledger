@@ -6,8 +6,8 @@ import lombok.Setter;
 @Getter
 @Setter
 public class EmissionStandard {
-    private String name;
-    private  String year;
-    private  String sourceType;
+    //private String name;
+    private  String gwpBasis;
+    private  String source;
     private  String version;
 }

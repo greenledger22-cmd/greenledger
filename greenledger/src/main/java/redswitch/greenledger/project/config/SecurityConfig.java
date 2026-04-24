@@ -48,18 +48,16 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/user/login",
                                 "/user/addUser",
+                                "/user/superAdmin/login",
                                 "/user/sendOtp",
-                                //"/user/getAllUser",
+                                "/user/addSuperUser",
                                 "/user/sendOtp",
                                 "/user/verifyOtp"
-//                                "/factor/getFactor",
-//                                "/factor/addFactor",
-//                                "/factor/updateFactor",
-//                                "/scope1Ingest/ingestEmission",
-//                                "/scope1Ingest/updateEmission",
-//                                "/scope1Ingest/getAllIngest"
+
 
                         ).permitAll()
+                       // .requestMatchers("/superAdmin/uploadFactor").permitAll()
+
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter,

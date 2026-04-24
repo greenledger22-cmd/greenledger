@@ -5,7 +5,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import redswitch.greenledger.project.model.ApiResponse;
 import redswitch.greenledger.project.model.Scope1FactorData;
 import redswitch.greenledger.project.model.User;
@@ -27,8 +30,8 @@ public class Scope1FactorController {
         this.scope1FactorService = scope1FactorService;
     }
 
-
-    @PostMapping("/addFactor")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @PostMapping("/superAdmin/addFactor")
     public  ResponseEntity<ApiResponse> addFactorData(
                                                       @RequestBody Scope1FactorData scope1FactorData) {
 
@@ -43,10 +46,20 @@ public class Scope1FactorController {
         return scope1FactorService.addFactor(scope1FactorData);
     }
 
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @PostMapping("/superAdmin/uploadFactor")
+    public  ResponseEntity<ApiResponse> uploadFactorData(
+            @RequestParam("file") MultipartFile file, Authentication authentication) {
 
-    @PostMapping("/updateFactor")
-    public  ResponseEntity<ApiResponse> updateFactorData(@RequestHeader("email") String email,
-                                                @RequestBody Scope1FactorData scope1FactorData) {
+
+        return scope1FactorService.uploadFactor(file,authentication);
+    }
+
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @PostMapping("/superAdmin/updateFactor/{id}")
+    public  ResponseEntity<ApiResponse> updateFactorData(
+                                                @RequestBody Scope1FactorData scope1FactorData,
+                                                @PathVariable("id") String userId,Authentication authentication) {
 
 
         if (scope1FactorData.getFuelName().isEmpty() || scope1FactorData.getFuelType().isEmpty()) {
@@ -55,7 +68,7 @@ public class Scope1FactorController {
 
         }
 
-        return scope1FactorService.updateFactor(scope1FactorData);
+        return scope1FactorService.updateFactor(scope1FactorData,authentication,userId);
     }
 
 
