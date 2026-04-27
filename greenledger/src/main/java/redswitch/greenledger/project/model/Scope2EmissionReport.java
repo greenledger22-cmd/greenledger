@@ -22,6 +22,7 @@ public class Scope2EmissionReport {
     private String facilityName;
     private String orgName;
     private Scope2Factor scope2Factor;
+    private Scope2ActivityDataIngest scope2ActivityDataIngest;
     private String provider;
     private String yearMonth;
     private String ingest_reference_id;

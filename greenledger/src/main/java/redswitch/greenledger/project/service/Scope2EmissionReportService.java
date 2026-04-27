@@ -61,16 +61,20 @@ public class Scope2EmissionReportService {
 
             Scope2EmissionReport scope2EmissionReport=new Scope2EmissionReport();
             String year = String.valueOf(YearMonth.parse(scope2ActivityDataIngest.getYearMonth()).getYear() - 1);
-            if (scope2ActivityDataIngest.getUnit().toLowerCase().trim().contains("kWh")){
-                scope2EmissionReport.setQuantityConsume(scope2ActivityDataIngest.getQuantityConsume()/1000);
-                scope2EmissionReport.setOutputUnit("mwh");
-                scope2EmissionReport.setCo2eTotal(scope2ActivityDataIngest.getQuantityConsume()*scope2Factor.getFactor());
+            scope2EmissionReport.setOutputUnit("tonne");
+            if (scope2ActivityDataIngest.getUnit().toLowerCase().trim().contains("kwh")) {
+                scope2EmissionReport.setQuantityConsume(scope2ActivityDataIngest.getOutPutQuantityConsume());
 
-            }else
-                scope2EmissionReport.setCo2eTotal(scope2ActivityDataIngest.getQuantityConsume()*scope2Factor.getFactor());
+                scope2EmissionReport.setCo2eTotal(scope2ActivityDataIngest.getOutPutQuantityConsume()*scope2Factor.getFactor());
+//                scope2EmissionReport.setOutputUnit("tCO2e");
 
-            scope2EmissionReport.setQuantityConsume(scope2ActivityDataIngest.getQuantityConsume());
-            scope2EmissionReport.setOutputUnit(scope2ActivityDataIngest.getOutputUnit());
+            }else {
+                scope2EmissionReport.setQuantityConsume(scope2ActivityDataIngest.getOutPutQuantityConsume());
+                scope2EmissionReport.setCo2eTotal(scope2ActivityDataIngest.getQuantityConsume() * scope2Factor.getFactor());
+            }
+            //scope2EmissionReport.setQuantityConsume(scope2ActivityDataIngest.getQuantityConsume());
+//            scope2EmissionReport.setOutputUnit(scope2ActivityDataIngest.getOutputUnit());
+            scope2EmissionReport.setScope2ActivityDataIngest(scope2ActivityDataIngest);
             scope2EmissionReport.setYear(year);
             scope2EmissionReport.setCost(scope2ActivityDataIngest.getCost());
             scope2EmissionReport.setYearMonth(scope2ActivityDataIngest.getYearMonth());
@@ -116,8 +120,8 @@ public class Scope2EmissionReportService {
         // Step 1: headers
         List<String> headers = List.of(
                 "Emission Factor Source","version","Organization","Facility","Electricity Cost" ,
-                "Raw Input Value","Input Unit(kWh/MWh)","Normalised(MWh)","EF(tCO₂e/ MWh)",
-                "CO₂e Total(tCO₂e)","Output Unit","Cost","Method", "Report Date"
+                "Raw Input Value","Input Unit(kWh/MWh)","Normalised(MWh)","EF(tCO2e)/MWH",
+                "CO2e Total(tCO2e)","Output Unit","Cost","Method", "Report Date"
 
         );
 
@@ -132,16 +136,17 @@ public class Scope2EmissionReportService {
 
                     safe(r.getFacilityName()),
                     String.valueOf(r.getCost()),
-                    String.valueOf(r.getQuantityConsume()), //Raw Input Value
-                    String.valueOf(r.getUnit()),
+                    String.valueOf(r.getScope2ActivityDataIngest().getQuantityConsume()), //Raw Input Value
+                    String.valueOf(r.getScope2ActivityDataIngest().getUnit()),//Input Unit(kWh/MWh)
 
-                    String.valueOf(getConvert(r.getUnit(),r.getQuantityConsume())),
+                    String.valueOf(r.getScope2ActivityDataIngest().getOutputUnit()),//Normalised(MWh)
 
 
                     String.valueOf(r.getScope2Factor().getFactor()),//EF(tCO₂e / MWh)
-                    String.valueOf(r.getQuantityConsume()),//CO₂e Total(tCO₂e)
-                    safe(r.getOutputUnit()),
-                    String.valueOf(r.getCost()),
+                    String.valueOf(r.getCo2eTotal()),//CO₂e Total(tCO₂e)
+//                    safe(r.getOutputUnit()),
+                    "tCO2e",
+
 
                     "Location-Based",
                     String.valueOf(r.getYearMonth())
