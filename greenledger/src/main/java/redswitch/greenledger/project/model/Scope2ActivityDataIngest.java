@@ -20,6 +20,7 @@ public class Scope2ActivityDataIngest {
     //private String emissionCategory;
    // private String emissionType;
     private double quantityConsume;
+    private double outPutQuantityConsume;
     private String unit;
     private String fuelName;
     //private double amount;

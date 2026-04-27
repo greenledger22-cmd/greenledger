@@ -46,7 +46,7 @@ public class Scope2DataIngestService {
         public ResponseEntity<ApiResponse> ingest(Scope2ActivityDataIngest scope2ActivityDataIngest){
             try {
                 Optional<Scope2ActivityDataIngest> scope2ActivityDataIngest1=scope2DataIngestRepository
-                        .findByYearMonthAndOrgNameAndFacilityNameAndStatus(scope2ActivityDataIngest.getYearMonth(),scope2ActivityDataIngest.getOrgName(),scope2ActivityDataIngest.getFacilityName(),10);
+                        .findByYearMonthAndOrgNameAndFacilityNameAndFuelNameAndStatus(scope2ActivityDataIngest.getYearMonth(),scope2ActivityDataIngest.getOrgName(),scope2ActivityDataIngest.getFacilityName(),scope2ActivityDataIngest.getFuelName(),10);
                 Scope2ActivityDataIngest saved;
                 if (scope2ActivityDataIngest1.isPresent()){
                     return  ResponseEntity.status(CONFLICT)
@@ -55,6 +55,16 @@ public class Scope2DataIngestService {
                 }else {
 
                         LocalDate todayUtc = LocalDate.now(ZoneOffset.UTC);
+                        if (scope2ActivityDataIngest.getUnit().equalsIgnoreCase("kwh")){
+                            scope2ActivityDataIngest.setOutPutQuantityConsume(scope2ActivityDataIngest.getQuantityConsume()/1000);
+                            scope2ActivityDataIngest.setOutputUnit("mwh");
+                        }else {
+                            scope2ActivityDataIngest.setOutputUnit("mwh");
+                            scope2ActivityDataIngest.setOutPutQuantityConsume(scope2ActivityDataIngest.getQuantityConsume());
+                        }
+
+
+
                         scope2ActivityDataIngest.setCreateDate(todayUtc);
                         scope2ActivityDataIngest.setUpdateDate(todayUtc);
                         scope2ActivityDataIngest.setYear(scope2ActivityDataIngest.getYearMonth().split("-")[0]);
